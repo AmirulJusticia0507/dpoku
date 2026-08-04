@@ -11,7 +11,13 @@ include 'assets.php';
 <div class="content-wrapper">
   <div class="content-header">
     <div class="container-fluid">
-      <h3 class="mb-2">Form Input Bounty</h3>
+      <h3 class="mb-2 d-flex justify-content-between align-items-center">
+        <span>Form Input Bounty</span>
+        <div>
+          <a href="export_dpo.php" class="btn btn-success btn-sm"><i class="fas fa-file-csv"></i> Export CSV DPO</a>
+          <a href="audit_log.php" class="btn btn-info btn-sm text-white"><i class="fas fa-history"></i> Audit Log</a>
+        </div>
+      </h3>
     </div>
   </div>
 
@@ -21,42 +27,63 @@ include 'assets.php';
       <?php
       // Proses Tambah Data
       if (isset($_POST['submit'])) {
-        $jumlah_bounty = preg_replace('/[^0-9]/', '', $_POST['jumlah_bounty']);
-        $id_kasus = $_POST['id_kasus'];
-        $id_hukuman = $_POST['id_hukuman'];
+         $jumlah_bounty = preg_replace('/[^0-9]/', '', $_POST['jumlah_bounty']);
+         $id_kasus = (int) $_POST['id_kasus'];
+         $id_hukuman = (int) $_POST['id_hukuman'];
+         $createdBy = (int) ($_SESSION['user_id'] ?? 0);
 
-        $query = "INSERT INTO bounty (jumlah_bounty, id_kasus, id_hukuman) VALUES ('$jumlah_bounty', '$id_kasus', '$id_hukuman')";
-        if (mysqli_query($koneksidpogendeng, $query)) {
-          echo '<div class="alert alert-success mt-3">Data berhasil disimpan!</div>';
-        } else {
-          echo '<div class="alert alert-danger mt-3">Gagal menyimpan data.</div>';
-        }
+         $stmt = $koneksidpogendeng->prepare(
+             "INSERT INTO bounty (jumlah_bounty, id_kasus, id_hukuman, created_by)
+              VALUES (?, ?, ?, ?)");
+         $stmt->bind_param('iiii', $jumlah_bounty, $id_kasus, $id_hukuman, $createdBy);
+         if ($stmt->execute()) {
+             $newId = (int) $stmt->insert_id;
+             $stmt->close();
+             include __DIR__.'/lib/audit_log.php';
+             log_audit('create', 'bounty', $newId, "Tambah bounty kasus=$id_kasus hukuman=$id_hukuman");
+             echo '<div class="alert alert-success mt-3">Data berhasil disimpan!</div>';
+         } else {
+             $stmt->close();
+             echo '<div class="alert alert-danger mt-3">Gagal menyimpan data.</div>';
+         }
       }
 
       // Proses Update Data
       if (isset($_POST['update'])) {
-        $id = $_POST['id'];
-        $jumlah_bounty = preg_replace('/[^0-9]/', '', $_POST['jumlah_bounty']);
-        $id_kasus = $_POST['id_kasus'];
-        $id_hukuman = $_POST['id_hukuman'];
+         $id = (int) $_POST['id'];
+         $jumlah_bounty = preg_replace('/[^0-9]/', '', $_POST['jumlah_bounty']);
+         $id_kasus = (int) $_POST['id_kasus'];
+         $id_hukuman = (int) $_POST['id_hukuman'];
+         $upBy = (int) ($_SESSION['user_id'] ?? 0);
 
-        $query = "UPDATE bounty SET jumlah_bounty='$jumlah_bounty', id_kasus='$id_kasus', id_hukuman='$id_hukuman' WHERE id='$id'";
-        if (mysqli_query($koneksidpogendeng, $query)) {
-          echo '<div class="alert alert-success mt-3">Data berhasil diupdate!</div>';
-        } else {
-          echo '<div class="alert alert-danger mt-3">Gagal update data.</div>';
-        }
+         $stmt = $koneksidpogendeng->prepare(
+             "UPDATE bounty SET jumlah_bounty=?, id_kasus=?, id_hukuman=?, updated_by=? WHERE id=?");
+         $stmt->bind_param('iiiii', $jumlah_bounty, $id_kasus, $id_hukuman, $upBy, $id);
+         if ($stmt->execute()) {
+             $stmt->close();
+             include __DIR__.'/lib/audit_log.php';
+             log_audit('update', 'bounty', $id, "Update bounty -> kasus=$id_kasus hukuman=$id_hukuman");
+             echo '<div class="alert alert-success mt-3">Data berhasil diupdate!</div>';
+         } else {
+             $stmt->close();
+             echo '<div class="alert alert-danger mt-3">Gagal update data.</div>';
+         }
       }
 
       // Proses Hapus Data
       if (isset($_GET['hapus'])) {
-        $id = $_GET['hapus'];
-        $query = "DELETE FROM bounty WHERE id='$id'";
-        if (mysqli_query($koneksidpogendeng, $query)) {
-          echo '<div class="alert alert-success mt-3">Data berhasil dihapus!</div>';
-        } else {
-          echo '<div class="alert alert-danger mt-3">Gagal menghapus data.</div>';
-        }
+         $id = (int) $_GET['hapus'];
+         $stmt = $koneksidpogendeng->prepare("DELETE FROM bounty WHERE id=?");
+         $stmt->bind_param('i', $id);
+         if ($stmt->execute()) {
+             $stmt->close();
+             include __DIR__.'/lib/audit_log.php';
+             log_audit('delete', 'bounty', $id, 'Hapus bounty');
+             echo '<div class="alert alert-success mt-3">Data berhasil dihapus!</div>';
+         } else {
+             $stmt->close();
+             echo '<div class="alert alert-danger mt-3">Gagal menghapus data.</div>';
+         }
       }
 
       // Ambil data jika mau edit

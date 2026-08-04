@@ -16,25 +16,59 @@ if (isset($_POST['submit'])) {
     $status_dpo      = $_POST['status_dpo'];
 
     // Foto Upload + Frame
-    $foto_name = $_FILES['foto']['name'];
-    $foto_tmp  = $_FILES['foto']['tmp_name'];
+    $foto_name = $_FILES['foto']['name'] ?? '';
+    $foto_tmp  = $_FILES['foto']['tmp_name'] ?? '';
+    $foto_error = $_FILES['foto']['error'] ?? UPLOAD_ERR_NO_FILE;
+    $foto_size  = $_FILES['foto']['size'] ?? 0;
     $upload_dir = 'uploads/';
+
+    // --- Validasi foto upload ---
+    if ($foto_error === UPLOAD_ERR_NO_FILE || empty($foto_tmp) || !is_uploaded_file($foto_tmp)) {
+        die("<script>alert('Foto wajib diupload.'); window.history.back();</script>");
+    }
+    if ($foto_error !== UPLOAD_ERR_OK) {
+        die("<script>alert('Upload foto gagal (kode error: $foto_error).'); window.history.back();</script>");
+    }
+
+    // Ekstensi & ukuran
+    $allowedExt = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'];
+    $ext = strtolower(pathinfo($foto_name, PATHINFO_EXTENSION));
+    if (!isset($allowedExt[$ext])) {
+        die("<script>alert('Format foto tidak didukung. Gunakan JPG/JPEG/PNG/WebP.'); window.history.back();</script>");
+    }
+
+    // Ukuran maks 3 MB
+    if ($foto_size > 3 * 1024 * 1024) {
+        die("<script>alert('Foto melebihi 3 MB.'); window.history.back();</script>");
+    }
+
+    // Verifikasi MIME via getimagesize (bukan hanya ekstensi)
+    $imageInfo = @getimagesize($foto_tmp);
+    if ($imageInfo === false || !isset($allowedExt[$imageInfo['mime']])) {
+        die("<script>alert('File bukan gambar yang valid.'); window.history.back();</script>");
+    }
 
     // Pastikan folder uploads ada
     if (!file_exists($upload_dir)) {
-        mkdir($upload_dir, 0777, true);
+        mkdir($upload_dir, 0755, true);
     }
 
-    $target_file = $upload_dir . time() . "_" . basename($foto_name);
+    // Filename acak (hindari overwrite & path traversal)
+    $target_file = $upload_dir . bin2hex(random_bytes(8)) . '_' . time() . '.jpg';
 
-    // Simpan original foto dulu
-    if (move_uploaded_file($foto_tmp, $target_file)) {
-        // Proses overlay frame wanted
-        $frame = 'wanted_new.png';
-        $frame_image = imagecreatefrompng($frame);
-        $uploaded_image = imagecreatefromjpeg($target_file);
+    // Simpan original foto dulu (convert ke JPG agar konsisten dengan GD frame)
+    $uploaded_image = ($imageInfo[2] === IMAGETYPE_PNG) ? imagecreatefrompng($foto_tmp) : imagecreatefromjpeg($foto_tmp);
+    if (!$uploaded_image) {
+        die("<script>alert('Gagal memproses gambar.'); window.history.back();</script>");
+    }
 
-        // Resize jika ukuran tidak sesuai
+    // Simpan original (jpeg) untuk fallback
+    imagejpeg($uploaded_image, $target_file, 90);
+
+    // Resize jika ukuran tidak sesuai dengan frame
+    $frame = 'wanted_new.png';
+    $frame_image = @imagecreatefrompng($frame);
+    if ($frame_image) {
         $frame_width = imagesx($frame_image);
         $frame_height = imagesy($frame_image);
         $uploaded_width = imagesx($uploaded_image);
@@ -50,18 +84,32 @@ if (isset($_POST['submit'])) {
         imagejpeg($new_image, $framed_file, 90);
 
         // Free memory
-        imagedestroy($uploaded_image);
-        imagedestroy($frame_image);
         imagedestroy($new_image);
+        imagedestroy($frame_image);
+    } else {
+        $framed_file = $target_file;
+    }
+    imagedestroy($uploaded_image);
 
-        // Insert ke database
-        $sql = "INSERT INTO dpo (nik, nama_lengkap, tanggal_lahir, jenis_kelamin, nama_instansi, jenis_kasus, jenis_hukuman, no_hp, email, media_sosial, alamat, status_dpo, foto)
-                VALUES ('$nik', '$nama_lengkap', '$tanggal_lahir', '$jenis_kelamin', '$nama_instansi', '$jenis_kasus', '$jenis_hukuman', '$no_hp', '$email', '$media_sosial', '$alamat', '$status_dpo', '$framed_file')";
+    // Insert ke database (prepared statement aman)
+        $createdBy = (int) ($_SESSION['user_id'] ?? 0);
+        $stmt = $koneksidpogendeng->prepare(
+            "INSERT INTO dpo (nik, nama_lengkap, tanggal_lahir, jenis_kelamin, nama_instansi,
+                    jenis_kasus, jenis_hukuman, no_hp, email, media_sosial, alamat, status_dpo, foto, created_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param('sssssssssssssi', $nik, $nama_lengkap, $tanggal_lahir, $jenis_kelamin,
+            $nama_instansi, $jenis_kasus, $jenis_hukuman, $no_hp, $email, $media_sosial,
+            $alamat, $status_dpo, $framed_file, $createdBy);
 
-        if (mysqli_query($koneksidpogendeng, $sql)) {
+        if ($stmt->execute()) {
+            $newId = (int) $stmt->insert_id;
+            $stmt->close();
+            include __DIR__.'/lib/audit_log.php';
+            log_audit('create', 'dpo', $newId, "Tambah DPO NIK=$nik nama=$nama_lengkap instansi=$nama_instansi");
             echo "<script>alert('Data DPO berhasil ditambahkan!'); window.location.href='inputdpo.php';</script>";
         } else {
-            echo "Error: " . $sql . "<br>" . mysqli_error($koneksidpogendeng);
+            $stmt->close();
+            echo "Error: " . $koneksidpogendeng->error;
         }
     } else {
         echo "Gagal upload foto.";

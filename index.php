@@ -72,6 +72,11 @@ if (!isset($_SESSION['user_id'])) {
         <li class="nav-item d-none d-sm-inline-block">
           <a href="#" class="nav-link">Home</a>
         </li>
+        <li class="nav-item d-none d-sm-inline-block">
+          <a href="export_dpo.php" class="nav-link text-success font-weight-bold">
+            <i class="fas fa-file-csv"></i> Export CSV DPO
+          </a>
+        </li>
       </ul>
     </nav>
 
