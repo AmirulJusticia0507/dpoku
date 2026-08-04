@@ -12,13 +12,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $confirm_password = $_POST['confirm_password'];
     $username = $_SESSION['reset_username'];
 
-    if ($new_password === $confirm_password) {
-        $hashed_password = password_hash($new_password, PASSWORD_BCRYPT);
-        mysqli_query($koneksidpogendeng, "UPDATE user SET password='$hashed_password' WHERE username='$username'");
+    if ($new_password === $confirm_password && strlen($new_password) >= 8) {
+        $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+        // Prepared statement (hindari SQL injection)
+        $stmt = $koneksidpogendeng->prepare("UPDATE user SET password = ? WHERE username = ?");
+        $stmt->bind_param('ss', $hashed_password, $username);
+        $stmt->execute();
+        $stmt->close();
+
         unset($_SESSION['reset_username']);
+        include __DIR__.'/lib/audit_log.php';
+        log_audit('update', 'user', null, "Reset password user $username via forgot");
         echo "<script>alert('Password berhasil direset. Silakan login kembali'); window.location='login.php';</script>";
     } else {
-        echo "<script>alert('Password tidak sama!');</script>";
+        echo "<script>alert('Password minimal 8 karakter dan tidak sama!');</script>";
     }
 }
 ?>

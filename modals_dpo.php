@@ -55,7 +55,7 @@ $jenishukuman = mysqli_fetch_all($jenishukuman_query, MYSQLI_ASSOC);
               <select class="form-control" name="instansi_id">
                 <option value="">-- Pilih Instansi --</option>
                 <?php foreach($instansis as $instansi): ?>
-                  <option value="<?= $instansi['id'] ?>"><?= $instansi['nama_instansi'] ?></option>
+                  <option value="<?= $instansi['id'] ?>"><?= htmlspecialchars($instansi['nama_instansi']) ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -65,7 +65,7 @@ $jenishukuman = mysqli_fetch_all($jenishukuman_query, MYSQLI_ASSOC);
               <select class="form-control" name="jenis_kasus_id">
                 <option value="">-- Pilih Kasus --</option>
                 <?php foreach($jeniskasus as $kasus): ?>
-                  <option value="<?= $kasus['id'] ?>"><?= $kasus['jenis_kasus'] ?></option>
+                  <option value="<?= $kasus['id'] ?>"><?= htmlspecialchars($kasus['jenis_kasus']) ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -75,7 +75,7 @@ $jenishukuman = mysqli_fetch_all($jenishukuman_query, MYSQLI_ASSOC);
               <select class="form-control" name="jenis_hukuman_id">
                 <option value="">-- Pilih Hukuman --</option>
                 <?php foreach($jenishukuman as $hukuman): ?>
-                  <option value="<?= $hukuman['id'] ?>"><?= $hukuman['jenis_hukuman'] ?></option>
+                  <option value="<?= $hukuman['id'] ?>"><?= htmlspecialchars($hukuman['jenis_hukuman']) ?></option>
                 <?php endforeach; ?>
               </select>
             </div>

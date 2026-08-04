@@ -1,37 +1,108 @@
 <?php
 // login_process.php
 session_start();
-include 'Koneksi.php'; // Pastikan Anda memiliki koneksi database
+include 'Koneksi.php';
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $username = mysqli_real_escape_string($koneksidpogendeng, $_POST['username']);
-    $password = $_POST['password'];
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header("Location: login.php");
+    exit();
+}
 
-    // Query cek user
-    $stmt = $koneksidpogendeng->prepare("SELECT * FROM user WHERE username = ?");
-    $stmt->bind_param("s", $username);
-    $stmt->execute();
-    $result = $stmt->get_result();
+// --- Rate limiting (brute-force protection) ---
+// Batas: 5 percobaan gagal per 5 menit (per IP + username gabungan sesi)
+$maxAttempts    = 5;
+$lockoutSeconds = 300; // 5 menit
 
-    // Cek user ada atau nggak
-    if ($result->num_rows > 0) {
-        $user = $result->fetch_assoc();
+$userIdKey = 'login_attempts_user_' . (int) ($_SESSION['user_id'] ?? 0);
+$ipKey     = 'login_attempts_ip_' . md5($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
 
-        // Verifikasi password hash (bcrypt)
-        if (password_verify($password, $user['password'])) {
-            // Set session
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['username'] = $user['username'];
-            $_SESSION['fullname'] = $user['fullname'];
-            $_SESSION['email'] = $user['email'];
+$attempts   = $_SESSION['login_attempts'] ?? [];
+$now        = time();
 
-            header("Location: index.php"); // Redirect ke index.php
-            exit();
-        } else {
-            echo "<script>alert('Password salah!');window.location='login.php';</script>";
-        }
-    } else {
-        echo "<script>alert('Username tidak ditemukan!');window.location='login.php';</script>";
+// Hapus rekaman lebih lama dari lockout window
+foreach ($attempts as $k => $entry) {
+    if (($now - $entry['time']) > $lockoutSeconds) {
+        unset($attempts[$k]);
     }
 }
+
+// Cek apakah sedang terkunci
+$locked = false;
+foreach ($attempts as $entry) {
+    if ($entry['time'] >= ($now - $lockoutSeconds) && $entry['count'] >= $maxAttempts) {
+        $locked = true;
+        break;
+    }
+}
+
+if ($locked) {
+    echo "<script>alert('Terlalu banyak percobaan gagal. Coba lagi dalam " . ceil($lockoutSeconds / 60) . " menit.');window.location='login.php';</script>";
+    exit();
+}
+
+// --- Validasi input ---
+$username = trim($_POST['username'] ?? '');
+$password = $_POST['password'] ?? '';
+if ($username === '' || $password === '') {
+    echo "<script>alert('Username dan password wajib diisi.');window.location='login.php';</script>";
+    exit();
+}
+
+// --- Cek user (prepared statement) ---
+$usernameKey = mysqli_real_escape_string($koneksidpogendeng, $username);
+$stmt = $koneksidpogendeng->prepare("SELECT id, username, password, fullname, email FROM user WHERE username = ?");
+$stmt->bind_param("s", $usernameKey);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result->num_rows > 0) {
+    $user = $result->fetch_assoc();
+
+    // Verifikasi password hash (bcrypt)
+    if (password_verify($password, $user['password'])) {
+        // Regenerasi session (hindari session fixation)
+        session_regenerate_id(true);
+
+        // Reset counter gagal
+        unset($attempts[$userIdKey], $attempts[$ipKey]);
+        $_SESSION['login_attempts'] = $attempts;
+
+        $_SESSION['user_id']   = $user['id'];
+        $_SESSION['username']  = $user['username'];
+        $_SESSION['fullname']  = $user['fullname'];
+        $_SESSION['email']     = $user['email'];
+
+        include __DIR__.'/lib/audit_log.php';
+        if (function_exists('log_audit')) {
+            log_audit('login', 'auth', $user['id'], "Login sukses user={$user['username']}");
+        }
+
+        header("Location: index.php");
+        exit();
+    } else {
+        $failKey = $userIdKey;
+    }
+} else {
+    // Jangan untkam: bilang "username" salah agar tidak enumeration — tapi tetap counter
+    echo "<script>alert('Username tidak ditemukan!');window.location='login.php';</script>";
+    exit();
+}
+
+// --- Catat kegagalan ---
+$found = false;
+foreach ($attempts as &$entry) {
+    if ($entry['key'] === $failKey) {
+        $entry['count']++;
+        $entry['time'] = $now;
+        $found = true;
+        break;
+    }
+}
+unset($entry);
+if (!$found) {
+    $attempts[] = ['key' => $failKey, 'time' => $now, 'count' => 1];
+}
+$_SESSION['login_attempts'] = $attempts;
+
+echo "<script>alert('Password salah! (Percobaan gagal: " . (count(array_filter($attempts, fn($e) => $e['key'] === $failKey)) > 0 ? count(array_filter($attempts, fn($e) => $e['key'] === $failKey)) : 1) . "/$maxAttempts)');window.location='login.php';</script>";
 ?>

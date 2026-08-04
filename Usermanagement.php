@@ -1,4 +1,13 @@
-<?php include 'Koneksi.php'; ?>
+<?php include 'Koneksi.php';
+include __DIR__.'/lib/audit_log.php';
+
+// Proteksi: hanya user login yang boleh kelola user
+session_start();
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+?>
 <?php include 'Header.php'; ?>
 <?php include 'Sidebar.php'; ?>
 <?php include 'assets.php'; ?>
@@ -22,58 +31,77 @@
       <?php
       // Proses Tambah Data
       if (isset($_POST['submit'])) {
-        $username = $_POST['username'];
+        $username = mysqli_real_escape_string($koneksidpogendeng, $_POST['username']);
         $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
-        $fullname = $_POST['fullname'];
-        $jumlah_saldo_bounty = $_POST['jumlah_saldo_bounty'];
-        $amount_saldo = $_POST['amount_saldo'];
-        $email = $_POST['email'];
+        $fullname = mysqli_real_escape_string($koneksidpogendeng, $_POST['fullname']);
+        $jumlah_saldo_bounty = preg_replace('/[^0-9]/', '', $_POST['jumlah_saldo_bounty'] ?? '0');
+        $amount_saldo = preg_replace('/[^0-9]/', '', $_POST['amount_saldo'] ?? '0');
+        $email = mysqli_real_escape_string($koneksidpogendeng, $_POST['email']);
+        $createdBy = (int) ($_SESSION['user_id'] ?? 0);
 
-        $query = "INSERT INTO user (username, password, fullname, jumlah_saldo_bounty, amount_saldo, email) 
-                  VALUES ('$username', '$password', '$fullname', '$jumlah_saldo_bounty', '$amount_saldo', '$email')";
-        if (mysqli_query($koneksidpogendeng, $query)) {
-          echo '<div class="alert alert-success mt-3">Data berhasil disimpan!</div>';
+        $stmt = $koneksidpogendeng->prepare(
+            "INSERT INTO user (username, password, fullname, jumlah_saldo_bounty, amount_saldo, email, created_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param('ssssssi', $username, $password, $fullname, $jumlah_saldo_bounty, $amount_saldo, $email, $createdBy);
+        if ($stmt->execute()) {
+            $newId = (int) $stmt->insert_id;
+            $stmt->close();
+            log_audit('create', 'user', $newId, "Tambah user $username");
+            echo '<div class="alert alert-success mt-3">Data berhasil disimpan!</div>';
         } else {
-          echo '<div class="alert alert-danger mt-3">Gagal menyimpan data.</div>';
+            $stmt->close();
+            echo '<div class="alert alert-danger mt-3">Gagal menyimpan data: '.$koneksidpogendeng->error.'</div>';
         }
       }
 
       // Proses Update Data
       if (isset($_POST['update'])) {
-        $id = $_POST['id'];
-        $username = $_POST['username'];
-        $fullname = $_POST['fullname'];
-        $jumlah_saldo_bounty = $_POST['jumlah_saldo_bounty'];
-        $amount_saldo = $_POST['amount_saldo'];
-        $email = $_POST['email'];
+        $id = (int) $_POST['id'];
+        $username = mysqli_real_escape_string($koneksidpogendeng, $_POST['username']);
+        $fullname = mysqli_real_escape_string($koneksidpogendeng, $_POST['fullname']);
+        $jumlah_saldo_bounty = preg_replace('/[^0-9]/', '', $_POST['jumlah_saldo_bounty'] ?? '0');
+        $amount_saldo = preg_replace('/[^0-9]/', '', $_POST['amount_saldo'] ?? '0');
+        $email = mysqli_real_escape_string($koneksidpogendeng, $_POST['email']);
+        $updatedBy = (int) ($_SESSION['user_id'] ?? 0);
 
-        $query = "UPDATE user SET username='$username', fullname='$fullname', 
-                  jumlah_saldo_bounty='$jumlah_saldo_bounty', amount_saldo='$amount_saldo', email='$email' 
-                  WHERE id='$id'";
-        if (mysqli_query($koneksidpogendeng, $query)) {
-          echo '<div class="alert alert-success mt-3">Data berhasil diupdate!</div>';
+        $stmt = $koneksidpogendeng->prepare(
+            "UPDATE user SET username=?, fullname=?, jumlah_saldo_bounty=?, amount_saldo=?, email=?, updated_by=? WHERE id=?");
+        $stmt->bind_param('ssssiii', $username, $fullname, $jumlah_saldo_bounty, $amount_saldo, $email, $updatedBy, $id);
+        if ($stmt->execute()) {
+            $stmt->close();
+            log_audit('update', 'user', $id, "Update user $username");
+            echo '<div class="alert alert-success mt-3">Data berhasil diupdate!</div>';
         } else {
-          echo '<div class="alert alert-danger mt-3">Gagal update data.</div>';
+            $stmt->close();
+            echo '<div class="alert alert-danger mt-3">Gagal update data: '.$koneksidpogendeng->error.'</div>';
         }
       }
 
       // Proses Hapus Data
       if (isset($_GET['hapus'])) {
-        $id = $_GET['hapus'];
-        $query = "DELETE FROM user WHERE id='$id'";
-        if (mysqli_query($koneksidpogendeng, $query)) {
-          echo '<div class="alert alert-success mt-3">Data berhasil dihapus!</div>';
+        $id = (int) $_GET['hapus'];
+        $stmt = $koneksidpogendeng->prepare("DELETE FROM user WHERE id=?");
+        $stmt->bind_param('i', $id);
+        if ($stmt->execute()) {
+            $stmt->close();
+            log_audit('delete', 'user', $id, 'Hapus user');
+            echo '<div class="alert alert-success mt-3">Data berhasil dihapus!</div>';
         } else {
-          echo '<div class="alert alert-danger mt-3">Gagal menghapus data.</div>';
+            $stmt->close();
+            echo '<div class="alert alert-danger mt-3">Gagal menghapus data.</div>';
         }
       }
 
       // Ambil data jika mau edit
       $editData = null;
       if (isset($_GET['edit'])) {
-        $id = $_GET['edit'];
-        $result = mysqli_query($koneksidpogendeng, "SELECT * FROM user WHERE id='$id'");
-        $editData = mysqli_fetch_array($result);
+        $id = (int) $_GET['edit'];
+        $stmt = $koneksidpogendeng->prepare("SELECT * FROM user WHERE id=?");
+        $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $editData = $result->fetch_assoc();
+        $stmt->close();
       }
       ?>
 
@@ -141,16 +169,16 @@
         <tbody>
           <?php
           $no = 1;
-          $data = mysqli_query($koneksidpogendeng, "SELECT * FROM user");
+          $data = mysqli_query($koneksidpogendeng, "SELECT * FROM user ORDER BY id DESC");
           while ($d = mysqli_fetch_array($data)) {
           ?>
             <tr>
               <td><?= $no++ ?></td>
-              <td><?= $d['username'] ?></td>
-              <td><?= $d['fullname'] ?></td>
-              <td><?= 'Rp ' . number_format($d['jumlah_saldo_bounty'], 0, ',', '.'); ?></td>
-              <td><?= 'Rp ' . number_format($d['amount_saldo'], 0, ',', '.'); ?></td>
-              <td><?= $d['email'] ?></td>
+              <td><?= htmlspecialchars($d['username']) ?></td>
+              <td><?= htmlspecialchars($d['fullname']) ?></td>
+              <td><?= 'Rp ' . number_format($d['jumlah_saldo_bounty'], 0, ',', '.') ?></td>
+              <td><?= 'Rp ' . number_format($d['amount_saldo'], 0, ',', '.') ?></td>
+              <td><?= htmlspecialchars($d['email']) ?></td>
               <td>
                 <a href="Usermanagement.php?edit=<?= $d['id'] ?>" class="btn btn-warning btn-sm">Edit</a>
                 <a href="Usermanagement.php?hapus=<?= $d['id'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('Yakin mau hapus?')">Hapus</a>
@@ -166,11 +194,6 @@
 
 <!-- DataTables JS -->
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-<script>
-  $(document).ready(function() {
-    $('#userTable').DataTable();
-  });
-</script>
 <script>
   $(document).ready(function() {
     $('#userTable').DataTable();
@@ -204,12 +227,6 @@
         icon.removeClass('bi-eye').addClass('bi-eye-slash');
       }
     });
-  });
-</script>
-
-<script>
-  $(document).ready(function() {
-    $('#userTable').DataTable();
   });
 </script>
 
