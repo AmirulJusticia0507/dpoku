@@ -1,128 +1,113 @@
 <?php include 'Koneksi.php'; ?>
+<?php $page_title = 'Form Input Instansi'; ?>
 <?php include 'Header.php'; ?>
-<?php include 'Sidebar.php'; ?>
-<?php include 'assets.php'; ?>
 
-<!-- DataTables CSS -->
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+<div class="bg-white rounded-xl shadow p-6">
+  <h3 class="text-xl font-bold mb-4">Form Input Instansi</h3>
 
-<!-- Content Wrapper -->
-<div class="content-wrapper">
-  <div class="content-header">
-    <div class="container-fluid">
-      <h3 class="mb-2">Form Input Instansi</h3>
+  <?php
+  // Proses Tambah Data
+  if (isset($_POST['submit'])) {
+    $nama_instansi = $_POST['nama_instansi'];
+    $keterangan_instansi = $_POST['keterangan_instansi'];
+
+    $query = "INSERT INTO instansi (nama_instansi, keterangan_instansi) VALUES ('$nama_instansi', '$keterangan_instansi')";
+    if (mysqli_query($koneksidpogendeng, $query)) {
+      echo '<div class="bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded-lg mt-3">Data berhasil disimpan!</div>';
+    } else {
+      echo '<div class="bg-red-100 border border-red-200 text-red-800 px-4 py-3 rounded-lg mt-3">Gagal menyimpan data.</div>';
+    }
+  }
+
+  // Proses Update Data
+  if (isset($_POST['update'])) {
+    $id = $_POST['id'];
+    $nama_instansi = $_POST['nama_instansi'];
+    $keterangan_instansi = $_POST['keterangan_instansi'];
+
+    $query = "UPDATE instansi SET nama_instansi='$nama_instansi', keterangan_instansi='$keterangan_instansi' WHERE id='$id'";
+    if (mysqli_query($koneksidpogendeng, $query)) {
+      echo '<div class="bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded-lg mt-3">Data berhasil diupdate!</div>';
+    } else {
+      echo '<div class="bg-red-100 border border-red-200 text-red-800 px-4 py-3 rounded-lg mt-3">Gagal update data.</div>';
+    }
+  }
+
+  // Proses Hapus Data
+  if (isset($_GET['hapus'])) {
+    $id = $_GET['hapus'];
+    $query = "DELETE FROM instansi WHERE id='$id'";
+    if (mysqli_query($koneksidpogendeng, $query)) {
+      echo '<div class="bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded-lg mt-3">Data berhasil dihapus!</div>';
+    } else {
+      echo '<div class="bg-red-100 border border-red-200 text-red-800 px-4 py-3 rounded-lg mt-3">Gagal menghapus data.</div>';
+    }
+  }
+
+  // Ambil data jika mau edit
+  $editData = null;
+  if (isset($_GET['edit'])) {
+    $id = $_GET['edit'];
+    $result = mysqli_query($koneksidpogendeng, "SELECT * FROM instansi WHERE id='$id'");
+    $editData = mysqli_fetch_array($result);
+  }
+  ?>
+
+  <!-- Form Input / Edit -->
+  <form action="" method="POST" class="max-w-2xl">
+    <?php if ($editData) { ?>
+      <input type="hidden" name="id" value="<?= $editData['id'] ?>">
+    <?php } ?>
+    <div class="mb-3">
+      <label for="nama_instansi" class="block text-sm font-medium text-gray-700 mb-1">Nama Instansi</label>
+      <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" id="nama_instansi" name="nama_instansi" required
+             value="<?= $editData ? $editData['nama_instansi'] : '' ?>">
     </div>
-  </div>
+    <div class="mb-3">
+      <label for="keterangan_instansi" class="block text-sm font-medium text-gray-700 mb-1">Keterangan Instansi</label>
+      <textarea class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" id="keterangan_instansi" name="keterangan_instansi" rows="4"><?= $editData ? $editData['keterangan_instansi'] : '' ?></textarea>
+    </div>
+    <?php if ($editData) { ?>
+      <button type="submit" name="update" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold px-4 py-2 rounded-lg transition">Update</button>
+      <a href="Inputinstansi.php" class="bg-gray-500 hover:bg-gray-600 text-white font-semibold px-4 py-2 rounded-lg transition">Batal</a>
+    <?php } else { ?>
+      <button type="submit" name="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition">Simpan</button>
+    <?php } ?>
+  </form>
 
-  <section class="content">
-    <div class="container-fluid">
-
-      <?php
-      // Proses Tambah Data
-      if (isset($_POST['submit'])) {
-        $nama_instansi = $_POST['nama_instansi'];
-        $keterangan_instansi = $_POST['keterangan_instansi'];
-
-        $query = "INSERT INTO instansi (nama_instansi, keterangan_instansi) VALUES ('$nama_instansi', '$keterangan_instansi')";
-        if (mysqli_query($koneksidpogendeng, $query)) {
-          echo '<div class="alert alert-success mt-3">Data berhasil disimpan!</div>';
-        } else {
-          echo '<div class="alert alert-danger mt-3">Gagal menyimpan data.</div>';
-        }
-      }
-
-      // Proses Update Data
-      if (isset($_POST['update'])) {
-        $id = $_POST['id'];
-        $nama_instansi = $_POST['nama_instansi'];
-        $keterangan_instansi = $_POST['keterangan_instansi'];
-
-        $query = "UPDATE instansi SET nama_instansi='$nama_instansi', keterangan_instansi='$keterangan_instansi' WHERE id='$id'";
-        if (mysqli_query($koneksidpogendeng, $query)) {
-          echo '<div class="alert alert-success mt-3">Data berhasil diupdate!</div>';
-        } else {
-          echo '<div class="alert alert-danger mt-3">Gagal update data.</div>';
-        }
-      }
-
-      // Proses Hapus Data
-      if (isset($_GET['hapus'])) {
-        $id = $_GET['hapus'];
-        $query = "DELETE FROM instansi WHERE id='$id'";
-        if (mysqli_query($koneksidpogendeng, $query)) {
-          echo '<div class="alert alert-success mt-3">Data berhasil dihapus!</div>';
-        } else {
-          echo '<div class="alert alert-danger mt-3">Gagal menghapus data.</div>';
-        }
-      }
-
-      // Ambil data jika mau edit
-      $editData = null;
-      if (isset($_GET['edit'])) {
-        $id = $_GET['edit'];
-        $result = mysqli_query($koneksidpogendeng, "SELECT * FROM instansi WHERE id='$id'");
-        $editData = mysqli_fetch_array($result);
-      }
-      ?>
-
-      <!-- Form Input / Edit -->
-      <form action="" method="POST">
-        <?php if ($editData) { ?>
-          <input type="hidden" name="id" value="<?= $editData['id'] ?>">
-        <?php } ?>
-        <div class="mb-3">
-          <label for="nama_instansi" class="form-label">Nama Instansi</label>
-          <input type="text" class="form-control" id="nama_instansi" name="nama_instansi" required
-                 value="<?= $editData ? $editData['nama_instansi'] : '' ?>">
-        </div>
-        <div class="mb-3">
-          <label for="keterangan_instansi" class="form-label">Keterangan Instansi</label>
-          <textarea class="form-control" id="keterangan_instansi" name="keterangan_instansi" rows="4"><?= $editData ? $editData['keterangan_instansi'] : '' ?></textarea>
-        </div>
-        <?php if ($editData) { ?>
-          <button type="submit" name="update" class="btn btn-warning">Update</button>
-          <a href="Inputinstansi.php" class="btn btn-secondary">Batal</a>
-        <?php } else { ?>
-          <button type="submit" name="submit" class="btn btn-primary">Simpan</button>
-        <?php } ?>
-      </form>
-
-      <hr>
-      <h4>Data Instansi</h4>
-      <table id="instansiTable" class="display table table-bordered">
-        <thead>
+  <hr class="my-6 border-gray-200">
+  <h4 class="text-lg font-semibold mb-3">Data Instansi</h4>
+  <div class="overflow-x-auto">
+    <table id="instansiTable" class="w-full text-sm text-left text-gray-700">
+      <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+        <tr>
+          <th class="px-3 py-2">No</th>
+          <th class="px-3 py-2">Nama Instansi</th>
+          <th class="px-3 py-2">Keterangan</th>
+          <th class="px-3 py-2">Aksi</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        <?php
+        $no = 1;
+        $data = mysqli_query($koneksidpogendeng, "SELECT * FROM instansi");
+        while ($d = mysqli_fetch_array($data)) {
+        ?>
           <tr>
-            <th>No</th>
-            <th>Nama Instansi</th>
-            <th>Keterangan</th>
-            <th>Aksi</th>
+            <td class="px-3 py-2"><?= $no++ ?></td>
+            <td class="px-3 py-2"><?= $d['nama_instansi'] ?></td>
+            <td class="px-3 py-2"><?= $d['keterangan_instansi'] ?></td>
+            <td class="px-3 py-2">
+              <a href="Inputinstansi.php?edit=<?= $d['id'] ?>" class="bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-semibold px-3 py-1 rounded-lg transition">Edit</a>
+              <a href="Inputinstansi.php?hapus=<?= $d['id'] ?>" class="bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-3 py-1 rounded-lg transition" onclick="return confirm('Yakin mau hapus?')">Hapus</a>
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          <?php
-          $no = 1;
-          $data = mysqli_query($koneksidpogendeng, "SELECT * FROM instansi");
-          while ($d = mysqli_fetch_array($data)) {
-          ?>
-            <tr>
-              <td><?= $no++ ?></td>
-              <td><?= $d['nama_instansi'] ?></td>
-              <td><?= $d['keterangan_instansi'] ?></td>
-              <td>
-                <a href="Inputinstansi.php?edit=<?= $d['id'] ?>" class="btn btn-warning btn-sm">Edit</a>
-                <a href="Inputinstansi.php?hapus=<?= $d['id'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('Yakin mau hapus?')">Hapus</a>
-              </td>
-            </tr>
-          <?php } ?>
-        </tbody>
-      </table>
-
-    </div>
-  </section>
+        <?php } ?>
+      </tbody>
+    </table>
+  </div>
 </div>
 
-<!-- DataTables JS -->
-<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script>
   $(document).ready(function() {
     $('#instansiTable').DataTable();
@@ -130,4 +115,3 @@
 </script>
 
 <?php include 'Footer.php'; ?>
-

@@ -1,5 +1,6 @@
 <?php
 // audit_log.php — Halaman lihat log audit
+$page_title = 'Audit Log';
 include 'session.php';
 include 'Koneksi.php';
 
@@ -37,61 +38,54 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 include 'Header.php';
-include 'Sidebar.php';
 ?>
 
-<div class="content-wrapper">
-  <div class="content-header">
-    <div class="container-fluid">
-      <h3 class="mb-2">Audit Log</h3>
-    </div>
-  </div>
-  <section class="content">
-    <div class="container-fluid">
-      <form method="GET" class="mb-3 row g-3 align-items-center">
-        <div class="col-auto">
-          <input type="text" name="action" value="<?= htmlspecialchars($_GET['action'] ?? '') ?>"
-                 class="form-control form-control-sm" placeholder="Action (create/update/delete)">
-        </div>
-        <div class="col-auto">
-          <input type="text" name="table_name" value="<?= htmlspecialchars($_GET['table_name'] ?? '') ?>"
-                 class="form-control form-control-sm" placeholder="Tabel">
-        </div>
-        <div class="col-auto">
-          <button class="btn btn-sm btn-primary">Filter</button>
-          <a href="audit_log.php" class="btn btn-sm btn-secondary">Reset</a>
-        </div>
-      </form>
+<div class="bg-white rounded-xl shadow p-6">
+  <h3 class="text-xl font-bold mb-4">Audit Log</h3>
 
-      <div class="table-responsive">
-        <table class="table table-bordered table-hover datatable">
-          <thead class="table-light">
-            <tr>
-              <th>#ID</th><th>Waktu</th><th>User</th><th>Aksi</th><th>Tabel</th><th>Record ID</th><th>Detail</th><th>IP</th>
+  <form method="GET" class="flex flex-wrap items-center gap-2 mb-4">
+    <input type="text" name="action" value="<?= htmlspecialchars($_GET['action'] ?? '') ?>"
+           class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Action (create/update/delete)">
+    <input type="text" name="table_name" value="<?= htmlspecialchars($_GET['table_name'] ?? '') ?>"
+           class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Tabel">
+    <button class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition">Filter</button>
+    <a href="audit_log.php" class="bg-gray-500 hover:bg-gray-600 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition">Reset</a>
+  </form>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm text-left text-gray-700">
+      <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+        <tr>
+          <th class="px-3 py-2">#ID</th>
+          <th class="px-3 py-2">Waktu</th>
+          <th class="px-3 py-2">User</th>
+          <th class="px-3 py-2">Aksi</th>
+          <th class="px-3 py-2">Tabel</th>
+          <th class="px-3 py-2">Record ID</th>
+          <th class="px-3 py-2">Detail</th>
+          <th class="px-3 py-2">IP</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        <?php if (mysqli_num_rows($result) > 0): ?>
+          <?php while ($r = $result->fetch_assoc()): ?>
+            <tr class="hover:bg-gray-50">
+              <td class="px-3 py-2"><?= $r['id'] ?></td>
+              <td class="px-3 py-2"><?= $r['created_at'] ?></td>
+              <td class="px-3 py-2"><?= htmlspecialchars($r['username'] ?? $r['user_id']) ?></td>
+              <td class="px-3 py-2"><?= htmlspecialchars($r['action']) ?></td>
+              <td class="px-3 py-2"><?= htmlspecialchars($r['table_name']) ?></td>
+              <td class="px-3 py-2"><?= $r['record_id'] ?></td>
+              <td class="px-3 py-2"><?= htmlspecialchars($r['detail'] ?? '-') ?></td>
+              <td class="px-3 py-2"><?= htmlspecialchars($r['ip_address'] ?? '-') ?></td>
             </tr>
-          </thead>
-          <tbody>
-            <?php if (mysqli_num_rows($result) > 0): ?>
-              <?php while ($r = $result->fetch_assoc()): ?>
-                <tr>
-                  <td><?= $r['id'] ?></td>
-                  <td><?= $r['created_at'] ?></td>
-                  <td><?= htmlspecialchars($r['username'] ?? $r['user_id']) ?></td>
-                  <td><?= htmlspecialchars($r['action']) ?></td>
-                  <td><?= htmlspecialchars($r['table_name']) ?></td>
-                  <td><?= $r['record_id'] ?></td>
-                  <td><?= htmlspecialchars($r['detail'] ?? '-') ?></td>
-                  <td><?= htmlspecialchars($r['ip_address'] ?? '-') ?></td>
-                </tr>
-              <?php endwhile; ?>
-            <?php else: ?>
-              <tr><td colspan="8" class="text-center text-muted">Belum ada log.</td></tr>
-            <?php endif; ?>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
+          <?php endwhile; ?>
+        <?php else: ?>
+          <tr><td colspan="8" class="px-3 py-2 text-center text-gray-400">Belum ada log.</td></tr>
+        <?php endif; ?>
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <?php include 'Footer.php'; ?>
