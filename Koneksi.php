@@ -13,10 +13,14 @@ if (file_exists($localConfig)) {
     require $localConfig;
 }
 
+// Pastikan password selalu berupa string (jika null/bool, PDO pgsql error
+// "SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a string")
+$db_pass = is_string($db_pass) ? $db_pass : (string) ($db_pass ?? '');
+
 if (!isset($koneksidpogendeng)) {
     try {
         $koneksidpogendeng = new PDO(
-            "pgsql:host=$db_host;port=$db_port;dbname=$db_name;user=$db_user;password=$db_pass",
+            "pgsql:host=$db_host;port=$db_port;dbname=$db_name;user=$db_user",
             $db_user,
             $db_pass,
             [
