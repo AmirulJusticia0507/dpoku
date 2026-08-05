@@ -11,8 +11,8 @@
     $jenis_kasus = $_POST['jenis_kasus'];
     $deskripsi_kasus = $_POST['deskripsi_kasus'];
 
-    $query = "INSERT INTO jenis_kasus (jenis_kasus, deskripsi_kasus) VALUES ('$jenis_kasus', '$deskripsi_kasus')";
-    if (mysqli_query($koneksidpogendeng, $query)) {
+    $stmt = $koneksidpogendeng->prepare("INSERT INTO jenis_kasus (jenis_kasus, deskripsi_kasus) VALUES (?, ?)");
+    if ($stmt->execute([$jenis_kasus, $deskripsi_kasus])) {
       echo '<div class="bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded-lg mt-3">Data berhasil disimpan!</div>';
     } else {
       echo '<div class="bg-red-100 border border-red-200 text-red-800 px-4 py-3 rounded-lg mt-3">Gagal menyimpan data.</div>';
@@ -25,8 +25,8 @@
     $jenis_kasus = $_POST['jenis_kasus'];
     $deskripsi_kasus = $_POST['deskripsi_kasus'];
 
-    $query = "UPDATE jenis_kasus SET jenis_kasus='$jenis_kasus', deskripsi_kasus='$deskripsi_kasus' WHERE id='$id'";
-    if (mysqli_query($koneksidpogendeng, $query)) {
+    $stmt = $koneksidpogendeng->prepare("UPDATE jenis_kasus SET jenis_kasus=?, deskripsi_kasus=? WHERE id=?");
+    if ($stmt->execute([$jenis_kasus, $deskripsi_kasus, $id])) {
       echo '<div class="bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded-lg mt-3">Data berhasil diupdate!</div>';
     } else {
       echo '<div class="bg-red-100 border border-red-200 text-red-800 px-4 py-3 rounded-lg mt-3">Gagal update data.</div>';
@@ -36,8 +36,8 @@
   // Proses Hapus Data
   if (isset($_GET['hapus'])) {
     $id = $_GET['hapus'];
-    $query = "DELETE FROM jenis_kasus WHERE id='$id'";
-    if (mysqli_query($koneksidpogendeng, $query)) {
+    $stmt = $koneksidpogendeng->prepare("DELETE FROM jenis_kasus WHERE id=?");
+    if ($stmt->execute([$id])) {
       echo '<div class="bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded-lg mt-3">Data berhasil dihapus!</div>';
     } else {
       echo '<div class="bg-red-100 border border-red-200 text-red-800 px-4 py-3 rounded-lg mt-3">Gagal menghapus data.</div>';
@@ -48,8 +48,9 @@
   $editData = null;
   if (isset($_GET['edit'])) {
     $id = $_GET['edit'];
-    $result = mysqli_query($koneksidpogendeng, "SELECT * FROM jenis_kasus WHERE id='$id'");
-    $editData = mysqli_fetch_array($result);
+    $stmt = $koneksidpogendeng->prepare("SELECT * FROM jenis_kasus WHERE id=?");
+    $stmt->execute([$id]);
+    $editData = $stmt->fetch();
   }
   ?>
 
@@ -90,8 +91,8 @@
       <tbody class="divide-y divide-gray-200">
         <?php
         $no = 1;
-        $data = mysqli_query($koneksidpogendeng, "SELECT * FROM jenis_kasus");
-        while ($d = mysqli_fetch_array($data)) {
+        $data = $koneksidpogendeng->query("SELECT * FROM jenis_kasus");
+        while ($d = $data->fetch()) {
         ?>
           <tr>
             <td class="px-3 py-2"><?= $no++ ?></td>

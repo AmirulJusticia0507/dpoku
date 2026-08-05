@@ -18,63 +18,54 @@ include 'Header.php';
   <?php
   // Proses Tambah Data
   if (isset($_POST['submit'])) {
-    $username = mysqli_real_escape_string($koneksidpogendeng, $_POST['username']);
+    $username = trim($_POST['username']);
     $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
-    $fullname = mysqli_real_escape_string($koneksidpogendeng, $_POST['fullname']);
+    $fullname = trim($_POST['fullname']);
     $jumlah_saldo_bounty = preg_replace('/[^0-9]/', '', $_POST['jumlah_saldo_bounty'] ?? '0');
     $amount_saldo = preg_replace('/[^0-9]/', '', $_POST['amount_saldo'] ?? '0');
-    $email = mysqli_real_escape_string($koneksidpogendeng, $_POST['email']);
+    $email = trim($_POST['email']);
     $createdBy = (int) ($_SESSION['user_id'] ?? 0);
 
     $stmt = $koneksidpogendeng->prepare(
-        "INSERT INTO user (username, password, fullname, jumlah_saldo_bounty, amount_saldo, email, created_by)
+        "INSERT INTO \"user\" (username, password, fullname, jumlah_saldo_bounty, amount_saldo, email, created_by)
          VALUES (?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param('ssssssi', $username, $password, $fullname, $jumlah_saldo_bounty, $amount_saldo, $email, $createdBy);
-    if ($stmt->execute()) {
-        $newId = (int) $stmt->insert_id;
-        $stmt->close();
+    if ($stmt->execute([$username, $password, $fullname, $jumlah_saldo_bounty, $amount_saldo, $email, $createdBy])) {
+        $newId = (int) $koneksidpogendeng->lastInsertId();
         log_audit('create', 'user', $newId, "Tambah user $username");
         echo '<div class="bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded-lg mt-3">Data berhasil disimpan!</div>';
     } else {
-        $stmt->close();
-        echo '<div class="bg-red-100 border border-red-200 text-red-800 px-4 py-3 rounded-lg mt-3">Gagal menyimpan data: '.$koneksidpogendeng->error.'</div>';
+        echo '<div class="bg-red-100 border border-red-200 text-red-800 px-4 py-3 rounded-lg mt-3">Gagal menyimpan data: '.implode(' ', $koneksidpogendeng->errorInfo()).'</div>';
     }
   }
 
   // Proses Update Data
   if (isset($_POST['update'])) {
     $id = (int) $_POST['id'];
-    $username = mysqli_real_escape_string($koneksidpogendeng, $_POST['username']);
-    $fullname = mysqli_real_escape_string($koneksidpogendeng, $_POST['fullname']);
+    $username = trim($_POST['username']);
+    $fullname = trim($_POST['fullname']);
     $jumlah_saldo_bounty = preg_replace('/[^0-9]/', '', $_POST['jumlah_saldo_bounty'] ?? '0');
     $amount_saldo = preg_replace('/[^0-9]/', '', $_POST['amount_saldo'] ?? '0');
-    $email = mysqli_real_escape_string($koneksidpogendeng, $_POST['email']);
+    $email = trim($_POST['email']);
     $updatedBy = (int) ($_SESSION['user_id'] ?? 0);
 
     $stmt = $koneksidpogendeng->prepare(
-        "UPDATE user SET username=?, fullname=?, jumlah_saldo_bounty=?, amount_saldo=?, email=?, updated_by=? WHERE id=?");
-    $stmt->bind_param('ssssiii', $username, $fullname, $jumlah_saldo_bounty, $amount_saldo, $email, $updatedBy, $id);
-    if ($stmt->execute()) {
-        $stmt->close();
+        "UPDATE \"user\" SET username=?, fullname=?, jumlah_saldo_bounty=?, amount_saldo=?, email=?, updated_by=? WHERE id=?");
+    if ($stmt->execute([$username, $fullname, $jumlah_saldo_bounty, $amount_saldo, $email, $updatedBy, $id])) {
         log_audit('update', 'user', $id, "Update user $username");
         echo '<div class="bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded-lg mt-3">Data berhasil diupdate!</div>';
     } else {
-        $stmt->close();
-        echo '<div class="bg-red-100 border border-red-200 text-red-800 px-4 py-3 rounded-lg mt-3">Gagal update data: '.$koneksidpogendeng->error.'</div>';
+        echo '<div class="bg-red-100 border border-red-200 text-red-800 px-4 py-3 rounded-lg mt-3">Gagal update data: '.implode(' ', $koneksidpogendeng->errorInfo()).'</div>';
     }
   }
 
   // Proses Hapus Data
   if (isset($_GET['hapus'])) {
     $id = (int) $_GET['hapus'];
-    $stmt = $koneksidpogendeng->prepare("DELETE FROM user WHERE id=?");
-    $stmt->bind_param('i', $id);
-    if ($stmt->execute()) {
-        $stmt->close();
+    $stmt = $koneksidpogendeng->prepare("DELETE FROM \"user\" WHERE id=?");
+    if ($stmt->execute([$id])) {
         log_audit('delete', 'user', $id, 'Hapus user');
         echo '<div class="bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded-lg mt-3">Data berhasil dihapus!</div>';
     } else {
-        $stmt->close();
         echo '<div class="bg-red-100 border border-red-200 text-red-800 px-4 py-3 rounded-lg mt-3">Gagal menghapus data.</div>';
     }
   }
@@ -83,12 +74,9 @@ include 'Header.php';
   $editData = null;
   if (isset($_GET['edit'])) {
     $id = (int) $_GET['edit'];
-    $stmt = $koneksidpogendeng->prepare("SELECT * FROM user WHERE id=?");
-    $stmt->bind_param('i', $id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $editData = $result->fetch_assoc();
-    $stmt->close();
+    $stmt = $koneksidpogendeng->prepare("SELECT * FROM \"user\" WHERE id=?");
+    $stmt->execute([$id]);
+    $editData = $stmt->fetch();
   }
   ?>
 
@@ -155,8 +143,8 @@ include 'Header.php';
       <tbody class="divide-y divide-gray-200">
         <?php
         $no = 1;
-        $data = mysqli_query($koneksidpogendeng, "SELECT * FROM user ORDER BY id DESC");
-        while ($d = mysqli_fetch_array($data)) {
+        $data = $koneksidpogendeng->query("SELECT * FROM \"user\" ORDER BY id DESC");
+        while ($d = $data->fetch()) {
         ?>
           <tr>
             <td class="px-3 py-2"><?= $no++ ?></td>

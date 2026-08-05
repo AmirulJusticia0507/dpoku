@@ -6,11 +6,11 @@ include 'Header.php';
 
 $sql = "SELECT dpo.*, bounty.jumlah_bounty FROM dpo 
         LEFT JOIN bounty ON bounty.id_kasus = dpo.id";
-$result = mysqli_query($koneksidpogendeng, $sql);
+$result = $koneksidpogendeng->query($sql);
 ?>
 
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-  <?php while ($row = mysqli_fetch_assoc($result)): ?>
+  <?php while ($row = $result->fetch()): ?>
     <div class="bg-white rounded-xl shadow overflow-hidden">
       <img src="uploads/<?= htmlspecialchars($row['foto']); ?>" class="h-64 w-full object-cover" alt="<?= htmlspecialchars($row['nama_lengkap']); ?>">
       <div class="p-4 text-center">

@@ -49,15 +49,11 @@ if ($username === '' || $password === '') {
 }
 
 // --- Cek user (prepared statement) ---
-$usernameKey = mysqli_real_escape_string($koneksidpogendeng, $username);
-$stmt = $koneksidpogendeng->prepare("SELECT id, username, password, fullname, email FROM user WHERE username = ?");
-$stmt->bind_param("s", $usernameKey);
-$stmt->execute();
-$result = $stmt->get_result();
+$stmt = $koneksidpogendeng->prepare("SELECT id, username, password, fullname, email FROM \"user\" WHERE username = ?");
+$stmt->execute([$username]);
+$user = $stmt->fetch();
 
-if ($result->num_rows > 0) {
-    $user = $result->fetch_assoc();
-
+if ($user) {
     // Verifikasi password hash (bcrypt)
     if (password_verify($password, $user['password'])) {
         // Regenerasi session (hindari session fixation)

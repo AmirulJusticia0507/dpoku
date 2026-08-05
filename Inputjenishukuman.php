@@ -10,14 +10,16 @@
   $edit_data = null;
   if (isset($_GET['edit'])) {
     $id_edit = $_GET['edit'];
-    $result = mysqli_query($koneksidpogendeng, "SELECT * FROM jenis_hukuman WHERE id='$id_edit'");
-    $edit_data = mysqli_fetch_assoc($result);
+    $stmt = $koneksidpogendeng->prepare("SELECT * FROM jenis_hukuman WHERE id=?");
+    $stmt->execute([$id_edit]);
+    $edit_data = $stmt->fetch();
   }
 
   // Proses Hapus
   if (isset($_GET['delete'])) {
     $id_delete = $_GET['delete'];
-    mysqli_query($koneksidpogendeng, "DELETE FROM jenis_hukuman WHERE id='$id_delete'");
+    $stmt = $koneksidpogendeng->prepare("DELETE FROM jenis_hukuman WHERE id=?");
+    $stmt->execute([$id_delete]);
     echo "<script>alert('Data berhasil dihapus!'); window.location='Inputjenishukuman.php';</script>";
   }
 
@@ -30,12 +32,14 @@
 
     if (isset($_POST['id'])) { // Edit Mode
       $id = $_POST['id'];
-      $query = "UPDATE jenis_hukuman SET jenis_hukuman='$jenis_hukuman', lama_hukuman='$lama_hukuman', vonis_putusan='$vonis_putusan', status='$status' WHERE id='$id'";
+      $stmt = $koneksidpogendeng->prepare("UPDATE jenis_hukuman SET jenis_hukuman=?, lama_hukuman=?, vonis_putusan=?, status=? WHERE id=?");
+      $ok = $stmt->execute([$jenis_hukuman, $lama_hukuman, $vonis_putusan, $status, $id]);
     } else { // Input Baru
-      $query = "INSERT INTO jenis_hukuman (jenis_hukuman, lama_hukuman, vonis_putusan, status) VALUES ('$jenis_hukuman', '$lama_hukuman', '$vonis_putusan', '$status')";
+      $stmt = $koneksidpogendeng->prepare("INSERT INTO jenis_hukuman (jenis_hukuman, lama_hukuman, vonis_putusan, status) VALUES (?, ?, ?, ?)");
+      $ok = $stmt->execute([$jenis_hukuman, $lama_hukuman, $vonis_putusan, $status]);
     }
 
-    if (mysqli_query($koneksidpogendeng, $query)) {
+    if ($ok) {
       echo '<div class="bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded-lg mt-3">Data berhasil disimpan!</div>';
     } else {
       echo '<div class="bg-red-100 border border-red-200 text-red-800 px-4 py-3 rounded-lg mt-3">Gagal menyimpan data.</div>';
@@ -83,8 +87,8 @@
       <tbody class="divide-y divide-gray-200">
         <?php
         $no = 1;
-        $data = mysqli_query($koneksidpogendeng, "SELECT * FROM jenis_hukuman");
-        while ($d = mysqli_fetch_array($data)) {
+        $data = $koneksidpogendeng->query("SELECT * FROM jenis_hukuman");
+        while ($d = $data->fetch()) {
         ?>
           <tr>
             <td class="px-3 py-2"><?= $no++ ?></td>

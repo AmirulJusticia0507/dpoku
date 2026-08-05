@@ -1,5 +1,5 @@
 <?php
-include 'koneksi.php';
+include 'Koneksi.php';
 
 $nik   = trim($_GET['nik'] ?? '');
 $nama  = trim($_GET['nama'] ?? '');
@@ -10,13 +10,13 @@ $nik   = substr($nik, 0, 50);
 $nama  = substr($nama, 0, 100);
 $inst  = substr($inst, 0, 100);
 
-$where = '';
-$types = '';
+$where = [];
 $params = [];
 
-if ($nik !== '')  { $where .= " AND nik = ?";             $params[] = $nik;  $types .= 's'; }
-if ($nama !== '') { $where .= " AND nama_lengkap LIKE ?"; $params[] = "%$nama%"; $types .= 's'; }
-if ($inst !== '') { $where .= " AND nama_instansi = ?";   $params[] = $inst; $types .= 's'; }
+if ($nik !== '')  { $where[] = "nik = ?";             $params[] = $nik; }
+if ($nama !== '') { $where[] = "nama_lengkap ILIKE ?"; $params[] = "%$nama%"; }
+if ($inst !== '') { $where[] = "nama_instansi = ?";   $params[] = $inst; }
+$whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
 // Prepared statement (hindari SQL injection)
 $sql = "SELECT dpo.nik, dpo.nama_lengkap, dpo.tanggal_lahir, dpo.jenis_kelamin,
@@ -24,8 +24,8 @@ $sql = "SELECT dpo.nik, dpo.nama_lengkap, dpo.tanggal_lahir, dpo.jenis_kelamin,
                COALESCE(bounty.jumlah_bounty, 0) AS jumlah_bounty,
                dpo.foto
         FROM dpo
-        LEFT JOIN bounty ON bounty.id_kasus = dpo.jenis_kasus
-        WHERE 1=1 $where
+        LEFT JOIN bounty ON bounty.id_kasus = CASE WHEN dpo.jenis_kasus ~ '^[0-9]+$' THEN dpo.jenis_kasus::int ELSE NULL END
+        $whereSql
         ORDER BY dpo.created_at DESC
         LIMIT 1";
 
@@ -35,19 +35,10 @@ if (!$stmt) {
     exit();
 }
 
-if ($params) {
-    $bind = [];
-    $bind[] = $types;
-    foreach ($params as $k => $v) {
-        $bind[] = &$params[$k];
-    }
-    call_user_func_array([$stmt, 'bind_param'], $bind);
-}
+$stmt->execute($params);
+$row = $stmt->fetch();
 
-$stmt->execute();
-$result = $stmt->get_result();
-
-if ($result && $row = $result->fetch_assoc()) {
+if ($row) {
     echo json_encode([
         'status'      => 'success',
         'nama_lengkap'  => $row['nama_lengkap'],
@@ -65,4 +56,4 @@ if ($result && $row = $result->fetch_assoc()) {
 } else {
     echo json_encode(['status' => 'not_found']);
 }
-$stmt->close();
+

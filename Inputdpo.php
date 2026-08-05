@@ -2,12 +2,12 @@
 $page_title = 'Data DPO';
 include 'Header.php';
 include 'modals_dpo.php';
-include 'koneksi.php';
+include 'Koneksi.php';
 
 // Fetch data instansi, jenis kasus, dan jenis hukuman untuk select option
-$instansi = mysqli_query($koneksidpogendeng, "SELECT * FROM instansi");
-$kasus = mysqli_query($koneksidpogendeng, "SELECT * FROM jenis_kasus");
-$hukuman = mysqli_query($koneksidpogendeng, "SELECT * FROM jenis_hukuman");
+$instansi = $koneksidpogendeng->query("SELECT * FROM instansi");
+$kasus = $koneksidpogendeng->query("SELECT * FROM jenis_kasus");
+$hukuman = $koneksidpogendeng->query("SELECT * FROM jenis_hukuman");
 ?>
 
 <style>
@@ -36,7 +36,7 @@ $hukuman = mysqli_query($koneksidpogendeng, "SELECT * FROM jenis_hukuman");
         <label class="block text-sm font-medium text-gray-700 mb-1">Masukkan Nama Instansi</label>
         <select class="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2 focus:ring-2 focus:ring-blue-500 outline-none" id="instansi">
           <option value="">-- Pilih Instansi --</option>
-          <?php while($row = mysqli_fetch_assoc($instansi)) { ?>
+          <?php while($row = $instansi->fetch()) { ?>
             <option value="<?= $row['nama_instansi'] ?>"><?= $row['nama_instansi'] ?></option>
           <?php } ?>
         </select>

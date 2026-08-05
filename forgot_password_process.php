@@ -1,6 +1,6 @@
 <?php
 session_start();
-include 'koneksi.php';
+include 'Koneksi.php';
 include __DIR__.'/lib/audit_log.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
@@ -12,13 +12,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     // Prepared statement (hindari SQL injection)
-    $stmt = $koneksidpogendeng->prepare("SELECT id, username FROM user WHERE username = ? LIMIT 1");
-    $stmt->bind_param('s', $username);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $stmt->close();
+    $stmt = $koneksidpogendeng->prepare("SELECT id, username FROM \"user\" WHERE username = ? LIMIT 1");
+    $stmt->execute([$username]);
+    $found = $stmt->fetch();
 
-    if ($result->num_rows > 0) {
+    if ($found) {
         $_SESSION['reset_username'] = $username;
         log_audit('forgot_password', 'auth', null, "User lupa password: $username");
         header("Location: reset_password.php");

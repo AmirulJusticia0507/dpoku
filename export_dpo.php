@@ -10,22 +10,20 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $allow = [
-    'nik'           => 's',
-    'nama_lengkap'  => 's',
-    'nama_instansi' => 's',
-    'jenis_kasus'   => 's',
-    'status_dpo'    => 's',
+    'nik'           => true,
+    'nama_lengkap'  => true,
+    'nama_instansi' => true,
+    'jenis_kasus'   => true,
+    'status_dpo'    => true,
 ];
 $params = [];
-$types = '';
 $where = [];
 
-foreach ($allow as $col => $type) {
+foreach ($allow as $col => $_) {
     $val = trim($_GET[$col] ?? '');
     if ($val !== '' && $val !== null) {
-        $where[] = "$col LIKE ?";
+        $where[] = "$col ILIKE ?";
         $params[] = "%$val%";
-        $types .= $type;
     }
 }
 $whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
@@ -37,28 +35,17 @@ $sql = "SELECT dpo.nik, dpo.nama_lengkap, dpo.tanggal_lahir, dpo.jenis_kelamin,
                COALESCE(bounty.jumlah_bounty,0) AS jumlah_bounty,
                dpo.created_at, dpo.updated_at
         FROM dpo
-        LEFT JOIN bounty ON bounty.id_kasus = dpo.jenis_kasus
+        LEFT JOIN bounty ON bounty.id_kasus = CASE WHEN dpo.jenis_kasus ~ '^[0-9]+$' THEN dpo.jenis_kasus::int ELSE NULL END
         $whereSql
         ORDER BY dpo.created_at DESC";
 
-$stmt = $koneksidpogendeng->stmt_init();
-if (!$stmt || !($stmt = $koneksidpogendeng->prepare($sql))) {
+$stmt = $koneksidpogendeng->prepare($sql);
+if (!$stmt) {
     http_response_code(500);
     exit('Gagal menyiapkan statement.');
 }
 
-if ($params) {
-    // bind_param mensyaratkan argumen pass-by-reference
-    $bind = [];
-    $bind[] = $types;
-    foreach ($params as $k => $v) {
-        $bind[] = &$params[$k];
-    }
-    call_user_func_array([$stmt, 'bind_param'], $bind);
-}
-
-$stmt->execute();
-$res = $stmt->get_result();
+$stmt->execute($params);
 
 // Header CSV: gunakan nama file + UTF-8 BOM agar di Excel tidak korup
 $ts = date('Ymd_His');
@@ -81,7 +68,7 @@ fputcsv($out, [
 ]);
 
 $rows = 0;
-while ($row = $res->fetch_assoc()) {
+while ($row = $stmt->fetch()) {
     fputcsv($out, [
         $row['nik'],
         $row['nama_lengkap'],
@@ -101,5 +88,4 @@ while ($row = $res->fetch_assoc()) {
     $rows++;
 }
 fclose($out);
-$stmt->close();
 exit();

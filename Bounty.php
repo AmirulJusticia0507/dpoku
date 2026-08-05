@@ -24,15 +24,12 @@ include 'Header.php';
      $stmt = $koneksidpogendeng->prepare(
          "INSERT INTO bounty (jumlah_bounty, id_kasus, id_hukuman, created_by)
           VALUES (?, ?, ?, ?)");
-     $stmt->bind_param('iiii', $jumlah_bounty, $id_kasus, $id_hukuman, $createdBy);
-     if ($stmt->execute()) {
-         $newId = (int) $stmt->insert_id;
-         $stmt->close();
+     if ($stmt->execute([$jumlah_bounty, $id_kasus, $id_hukuman, $createdBy])) {
+         $newId = (int) $koneksidpogendeng->lastInsertId();
          include __DIR__.'/lib/audit_log.php';
          log_audit('create', 'bounty', $newId, "Tambah bounty kasus=$id_kasus hukuman=$id_hukuman");
          echo '<div class="bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded-lg mt-3">Data berhasil disimpan!</div>';
      } else {
-         $stmt->close();
          echo '<div class="bg-red-100 border border-red-200 text-red-800 px-4 py-3 rounded-lg mt-3">Gagal menyimpan data.</div>';
      }
   }
@@ -47,14 +44,11 @@ include 'Header.php';
 
      $stmt = $koneksidpogendeng->prepare(
          "UPDATE bounty SET jumlah_bounty=?, id_kasus=?, id_hukuman=?, updated_by=? WHERE id=?");
-     $stmt->bind_param('iiiii', $jumlah_bounty, $id_kasus, $id_hukuman, $upBy, $id);
-     if ($stmt->execute()) {
-         $stmt->close();
+     if ($stmt->execute([$jumlah_bounty, $id_kasus, $id_hukuman, $upBy, $id])) {
          include __DIR__.'/lib/audit_log.php';
          log_audit('update', 'bounty', $id, "Update bounty -> kasus=$id_kasus hukuman=$id_hukuman");
          echo '<div class="bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded-lg mt-3">Data berhasil diupdate!</div>';
      } else {
-         $stmt->close();
          echo '<div class="bg-red-100 border border-red-200 text-red-800 px-4 py-3 rounded-lg mt-3">Gagal update data.</div>';
      }
   }
@@ -63,14 +57,11 @@ include 'Header.php';
   if (isset($_GET['hapus'])) {
      $id = (int) $_GET['hapus'];
      $stmt = $koneksidpogendeng->prepare("DELETE FROM bounty WHERE id=?");
-     $stmt->bind_param('i', $id);
-     if ($stmt->execute()) {
-         $stmt->close();
+     if ($stmt->execute([$id])) {
          include __DIR__.'/lib/audit_log.php';
          log_audit('delete', 'bounty', $id, 'Hapus bounty');
          echo '<div class="bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded-lg mt-3">Data berhasil dihapus!</div>';
      } else {
-         $stmt->close();
          echo '<div class="bg-red-100 border border-red-200 text-red-800 px-4 py-3 rounded-lg mt-3">Gagal menghapus data.</div>';
      }
   }
@@ -79,8 +70,9 @@ include 'Header.php';
   $editData = null;
   if (isset($_GET['edit'])) {
     $id = $_GET['edit'];
-    $result = mysqli_query($koneksidpogendeng, "SELECT * FROM bounty WHERE id='$id'");
-    $editData = mysqli_fetch_array($result);
+    $stmt = $koneksidpogendeng->prepare("SELECT * FROM bounty WHERE id=?");
+    $stmt->execute([$id]);
+    $editData = $stmt->fetch();
   }
   ?>
 
@@ -100,8 +92,8 @@ include 'Header.php';
       <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" id="id_kasus" name="id_kasus" required>
         <option value="">Pilih Kasus</option>
         <?php
-        $kasus = mysqli_query($koneksidpogendeng, "SELECT * FROM jenis_kasus");
-        while ($k = mysqli_fetch_array($kasus)) {
+        $kasus = $koneksidpogendeng->query("SELECT * FROM jenis_kasus");
+        while ($k = $kasus->fetch()) {
           $selected = $editData && $editData['id_kasus'] == $k['id'] ? 'selected' : '';
           echo "<option value='{$k['id']}' $selected>{$k['jenis_kasus']}</option>";
         }
@@ -114,8 +106,8 @@ include 'Header.php';
       <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" id="id_hukuman" name="id_hukuman" required>
         <option value="">Pilih Hukuman</option>
         <?php
-        $hukuman = mysqli_query($koneksidpogendeng, "SELECT * FROM jenis_hukuman");
-        while ($h = mysqli_fetch_array($hukuman)) {
+        $hukuman = $koneksidpogendeng->query("SELECT * FROM jenis_hukuman");
+        while ($h = $hukuman->fetch()) {
           $selected = $editData && $editData['id_hukuman'] == $h['id'] ? 'selected' : '';
           echo "<option value='{$h['id']}' $selected>{$h['jenis_hukuman']}</option>";
         }
@@ -148,11 +140,11 @@ include 'Header.php';
       <tbody class="divide-y divide-gray-200">
         <?php
         $no = 1;
-        $data = mysqli_query($koneksidpogendeng, "SELECT bounty.*, jenis_kasus.jenis_kasus, jenis_hukuman.jenis_hukuman 
+        $data = $koneksidpogendeng->query("SELECT bounty.*, jenis_kasus.jenis_kasus, jenis_hukuman.jenis_hukuman 
                                                   FROM bounty 
                                                   LEFT JOIN jenis_kasus ON bounty.id_kasus = jenis_kasus.id
                                                   LEFT JOIN jenis_hukuman ON bounty.id_hukuman = jenis_hukuman.id");
-        while ($d = mysqli_fetch_array($data)) {
+        while ($d = $data->fetch()) {
         ?>
           <tr>
             <td class="px-3 py-2"><?= $no++ ?></td>

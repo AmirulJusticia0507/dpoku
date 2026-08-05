@@ -1,5 +1,5 @@
 <?php
-include 'koneksi.php';
+include 'Koneksi.php';
 
 if (isset($_POST['submit'])) {
     $nik             = $_POST['nik'];
@@ -96,35 +96,31 @@ if (isset($_POST['submit'])) {
 
     // Validasi unik NIK & email (cek duplikat)
     $cek = $koneksidpogendeng->prepare("SELECT id FROM dpo WHERE nik = ? OR email = ? LIMIT 1");
-    $cek->bind_param('ss', $nik, $email);
-    $cek->execute();
-    $cek->store_result();
-    if ($cek->num_rows > 0) {
-        $cek->close();
+    $cek->execute([$nik, $email]);
+    if ($cek->fetch()) {
         include __DIR__.'/lib/audit_log.php';
         log_audit('create_failed', 'dpo', null, "Duplikat NIK=$nik / email=$email ditolak");
         echo "<script>alert('NIK atau email sudah terdaftar. Upload ulang dengan data berbeda.');window.location.href='inputdpo.php';</script>";
         exit();
     }
-    $cek->close();
 
     $stmt = $koneksidpogendeng->prepare(
         "INSERT INTO dpo (nik, nama_lengkap, tanggal_lahir, jenis_kelamin, nama_instansi,
                 jenis_kasus, jenis_hukuman, no_hp, email, media_sosial, alamat, status_dpo, foto, created_by)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param('sssssssssssssi', $nik, $nama_lengkap, $tanggal_lahir, $jenis_kelamin,
+    $stmt->execute([
+        $nik, $nama_lengkap, $tanggal_lahir ?: null, $jenis_kelamin,
         $nama_instansi, $jenis_kasus, $jenis_hukuman, $no_hp, $email, $media_sosial,
-        $alamat, $status_dpo, $framed_file, $createdBy);
+        $alamat, $status_dpo, $framed_file, $createdBy,
+    ]);
 
-    if ($stmt->execute()) {
-        $newId = (int) $stmt->insert_id;
-        $stmt->close();
+    if ($stmt->rowCount() > 0) {
+        $newId = (int) $koneksidpogendeng->lastInsertId();
         include __DIR__.'/lib/audit_log.php';
         log_audit('create', 'dpo', $newId, "Tambah DPO NIK=$nik nama=$nama_lengkap instansi=$nama_instansi");
         echo "<script>alert('Data DPO berhasil ditambahkan!'); window.location.href='inputdpo.php';</script>";
     } else {
-        $stmt->close();
-        echo "Error: " . $koneksidpogendeng->error;
+        echo "Error: insert gagal";
     }
 } else {
     echo "Request tidak valid.";

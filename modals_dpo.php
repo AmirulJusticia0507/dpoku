@@ -1,14 +1,14 @@
 <?php
-include 'koneksi.php';
+include 'Koneksi.php';
 // Fetch data dari database
-$instansi_query = mysqli_query($koneksidpogendeng, "SELECT * FROM instansi");
-$instansis = mysqli_fetch_all($instansi_query, MYSQLI_ASSOC);
+$instansi_query = $koneksidpogendeng->query("SELECT * FROM instansi");
+$instansis = $instansi_query->fetchAll();
 
-$jeniskasus_query = mysqli_query($koneksidpogendeng, "SELECT * FROM jenis_kasus");
-$jeniskasus = mysqli_fetch_all($jeniskasus_query, MYSQLI_ASSOC);
+$jeniskasus_query = $koneksidpogendeng->query("SELECT * FROM jenis_kasus");
+$jeniskasus = $jeniskasus_query->fetchAll();
 
-$jenishukuman_query = mysqli_query($koneksidpogendeng, "SELECT * FROM jenis_hukuman");
-$jenishukuman = mysqli_fetch_all($jenishukuman_query, MYSQLI_ASSOC);
+$jenishukuman_query = $koneksidpogendeng->query("SELECT * FROM jenis_hukuman");
+$jenishukuman = $jenishukuman_query->fetchAll();
 ?>
 
 <!-- Modal Input DPO Lengkap -->

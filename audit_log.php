@@ -10,32 +10,22 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Filter opsional (prepared)
-$where = '';
+$where = [];
 $params = [];
-$types = '';
 if (!empty($_GET['action'])) {
-    $where .= " AND action = ?";
+    $where[] = "action = ?";
     $params[] = $_GET['action'];
-    $types .= 's';
 }
 if (!empty($_GET['table_name'])) {
-    $where .= " AND table_name = ?";
+    $where[] = "table_name = ?";
     $params[] = $_GET['table_name'];
-    $types .= 's';
 }
+$whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
-$sql = "SELECT * FROM audit_log WHERE 1=1 $where ORDER BY id DESC LIMIT 100";
+$sql = "SELECT * FROM audit_log $whereSql ORDER BY id DESC LIMIT 100";
 $stmt = $koneksidpogendeng->prepare($sql);
-if ($params) {
-    $bind = [];
-    $bind[] = $types;
-    foreach ($params as $k => $v) {
-        $bind[] = &$params[$k];
-    }
-    call_user_func_array([$stmt, 'bind_param'], $bind);
-}
-$stmt->execute();
-$result = $stmt->get_result();
+$stmt->execute($params);
+$result = $stmt->fetchAll();
 
 include 'Header.php';
 ?>
@@ -67,8 +57,8 @@ include 'Header.php';
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-200">
-        <?php if (mysqli_num_rows($result) > 0): ?>
-          <?php while ($r = $result->fetch_assoc()): ?>
+        <?php if (count($result) > 0): ?>
+          <?php foreach ($result as $r): ?>
             <tr class="hover:bg-gray-50">
               <td class="px-3 py-2"><?= $r['id'] ?></td>
               <td class="px-3 py-2"><?= $r['created_at'] ?></td>
@@ -79,7 +69,7 @@ include 'Header.php';
               <td class="px-3 py-2"><?= htmlspecialchars($r['detail'] ?? '-') ?></td>
               <td class="px-3 py-2"><?= htmlspecialchars($r['ip_address'] ?? '-') ?></td>
             </tr>
-          <?php endwhile; ?>
+          <?php endforeach; ?>
         <?php else: ?>
           <tr><td colspan="8" class="px-3 py-2 text-center text-gray-400">Belum ada log.</td></tr>
         <?php endif; ?>

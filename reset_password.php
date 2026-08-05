@@ -1,6 +1,6 @@
 <?php
 session_start();
-include 'koneksi.php';
+include 'Koneksi.php';
 
 if (!isset($_SESSION['reset_username'])) {
     header("Location: forgot_password.php");
@@ -15,10 +15,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if ($new_password === $confirm_password && strlen($new_password) >= 8) {
         $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
         // Prepared statement (hindari SQL injection)
-        $stmt = $koneksidpogendeng->prepare("UPDATE user SET password = ? WHERE username = ?");
-        $stmt->bind_param('ss', $hashed_password, $username);
-        $stmt->execute();
-        $stmt->close();
+        $stmt = $koneksidpogendeng->prepare("UPDATE \"user\" SET password = ? WHERE username = ?");
+        $stmt->execute([$hashed_password, $username]);
 
         unset($_SESSION['reset_username']);
         include __DIR__.'/lib/audit_log.php';
