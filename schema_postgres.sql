@@ -33,9 +33,12 @@ CREATE TABLE IF NOT EXISTS "user" (
     username VARCHAR(100) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     fullname VARCHAR(255),
+    role VARCHAR(20) NOT NULL DEFAULT 'operator',
     jumlah_saldo_bounty BIGINT DEFAULT 0,
     amount_saldo BIGINT DEFAULT 0,
     email VARCHAR(255),
+    failed_attempts INT DEFAULT 0,
+    locked_until TIMESTAMP,
     created_by INT,
     updated_by INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -45,8 +48,8 @@ CREATE TABLE IF NOT EXISTS "user" (
 CREATE TABLE IF NOT EXISTS bounty (
     id SERIAL PRIMARY KEY,
     jumlah_bounty BIGINT NOT NULL,
-    id_kasus INT,
-    id_hukuman INT,
+    id_kasus INT REFERENCES jenis_kasus(id) ON DELETE SET NULL,
+    id_hukuman INT REFERENCES jenis_hukuman(id) ON DELETE SET NULL,
     created_by INT,
     updated_by INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -55,22 +58,42 @@ CREATE TABLE IF NOT EXISTS bounty (
 
 CREATE TABLE IF NOT EXISTS dpo (
     id SERIAL PRIMARY KEY,
-    nik VARCHAR(50),
-    nama_lengkap VARCHAR(255),
+    nik VARCHAR(50) UNIQUE,
+    nama_lengkap VARCHAR(255) NOT NULL,
     tanggal_lahir DATE,
     jenis_kelamin VARCHAR(20),
-    nama_instansi VARCHAR(255),
-    jenis_kasus VARCHAR(255),
-    jenis_hukuman VARCHAR(255),
+    instansi_id INT REFERENCES instansi(id) ON DELETE SET NULL,
+    jenis_kasus_id INT REFERENCES jenis_kasus(id) ON DELETE SET NULL,
+    jenis_hukuman_id INT REFERENCES jenis_hukuman(id) ON DELETE SET NULL,
     no_hp VARCHAR(50),
     email VARCHAR(255),
     media_sosial VARCHAR(255),
     alamat TEXT,
-    status_dpo VARCHAR(50),
+    status_dpo VARCHAR(50) DEFAULT 'BURON',
     foto VARCHAR(500),
     created_by INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS barang_bukti (
+    id SERIAL PRIMARY KEY,
+    dpo_id INT REFERENCES dpo(id) ON DELETE CASCADE,
+    nama_file VARCHAR(500),
+    tipe_file VARCHAR(100),
+    ukuran INT,
+    keterangan TEXT,
+    uploaded_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS dpo_status_log (
+    id SERIAL PRIMARY KEY,
+    dpo_id INT REFERENCES dpo(id) ON DELETE CASCADE,
+    status_lama VARCHAR(50),
+    status_baru VARCHAR(50),
+    changed_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS audit_log (
@@ -88,12 +111,10 @@ CREATE TABLE IF NOT EXISTS audit_log (
 -- Index untuk pencarian umum
 CREATE INDEX IF NOT EXISTS idx_dpo_nik ON dpo (nik);
 CREATE INDEX IF NOT EXISTS idx_dpo_nama ON dpo (nama_lengkap);
-CREATE INDEX IF NOT EXISTS idx_dpo_instansi ON dpo (nama_instansi);
+CREATE INDEX IF NOT EXISTS idx_dpo_instansi ON dpo (instansi_id);
+CREATE INDEX IF NOT EXISTS idx_dpo_status ON dpo (status_dpo);
+CREATE INDEX IF NOT EXISTS idx_bukti_dpo ON barang_bukti (dpo_id);
 CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log (action);
-
--- User default (password: admin123 -> password_hash)
--- Ganti setelah login pertama.
--- Password hash di-buat lewat aplikasi agar konsisten (bcrypt).
 
 -- ============================================================
 -- SEED DATA

@@ -9,20 +9,21 @@ if (!isset($_SESSION['user_id'])) {
     exit('Akses ditolak. Silakan login terlebih dahulu.');
 }
 
-$allow = [
-    'nik'           => true,
-    'nama_lengkap'  => true,
-    'nama_instansi' => true,
-    'jenis_kasus'   => true,
-    'status_dpo'    => true,
+// Kolom yang boleh difilter -> peta ke ekspresi SQL (nama kolom)
+$filterMap = [
+    'nik'           => 'dpo.nik',
+    'nama_lengkap'  => 'dpo.nama_lengkap',
+    'nama_instansi' => 'instansi.nama_instansi',
+    'jenis_kasus'   => 'jenis_kasus.jenis_kasus',
+    'status_dpo'    => 'dpo.status_dpo',
 ];
 $params = [];
 $where = [];
 
-foreach ($allow as $col => $_) {
+foreach ($filterMap as $col => $expr) {
     $val = trim($_GET[$col] ?? '');
     if ($val !== '' && $val !== null) {
-        $where[] = "$col ILIKE ?";
+        $where[] = "$expr ILIKE ?";
         $params[] = "%$val%";
     }
 }
@@ -30,12 +31,15 @@ $whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
 // Prepared statement aman (hindari SQL injection)
 $sql = "SELECT dpo.nik, dpo.nama_lengkap, dpo.tanggal_lahir, dpo.jenis_kelamin,
-               dpo.nama_instansi, dpo.jenis_kasus, dpo.jenis_hukuman,
+               instansi.nama_instansi, jenis_kasus.jenis_kasus, jenis_hukuman.jenis_hukuman,
                dpo.no_hp, dpo.email, dpo.alamat, dpo.status_dpo,
                COALESCE(bounty.jumlah_bounty,0) AS jumlah_bounty,
                dpo.created_at, dpo.updated_at
         FROM dpo
-        LEFT JOIN bounty ON bounty.id_kasus = CASE WHEN dpo.jenis_kasus ~ '^[0-9]+$' THEN dpo.jenis_kasus::int ELSE NULL END
+        LEFT JOIN instansi     ON instansi.id = dpo.instansi_id
+        LEFT JOIN jenis_kasus  ON jenis_kasus.id = dpo.jenis_kasus_id
+        LEFT JOIN jenis_hukuman ON jenis_hukuman.id = dpo.jenis_hukuman_id
+        LEFT JOIN bounty       ON bounty.id_kasus = dpo.jenis_kasus_id
         $whereSql
         ORDER BY dpo.created_at DESC";
 

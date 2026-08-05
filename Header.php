@@ -10,9 +10,12 @@ $navItems = [
     ['href' => 'Inputinstansi.php',      'icon' => 'fas fa-building',       'label' => 'Input Instansi'],
     ['href' => 'Inputjeniskasus.php',    'icon' => 'fas fa-gavel',          'label' => 'Input Jenis Kasus'],
     ['href' => 'Inputjenishukuman.php',  'icon' => 'fas fa-balance-scale',  'label' => 'Input Jenis Hukuman'],
-    ['href' => 'Usermanagement.php',     'icon' => 'fas fa-users-cog',      'label' => 'User Management'],
+    ['href' => 'Usermanagement.php',     'icon' => 'fas fa-users-cog',      'label' => 'User Management', 'role' => 'admin'],
     ['href' => 'Bounty.php',             'icon' => 'fas fa-money-bill-wave','label' => 'Bounty'],
 ];
+
+$userRole = $_SESSION['role'] ?? 'operator';
+$navItems = array_filter($navItems, fn($item) => !isset($item['role']) || $item['role'] === $userRole);
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -90,7 +93,11 @@ $navItems = [
       <div class="flex items-center gap-3">
         <span class="font-semibold text-gray-700 text-sm hidden sm:inline">
           <?= isset($_SESSION['fullname']) ? htmlspecialchars($_SESSION['fullname']) : '' ?>
+          <span class="ml-1 text-xs font-bold <?= $userRole === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600' ?> px-2 py-0.5 rounded-full"><?= strtoupper($userRole) ?></span>
         </span>
+        <a href="change_password.php" class="text-gray-500 hover:text-gray-800 text-sm transition" title="Ganti Password">
+          <i class="fas fa-key"></i>
+        </a>
         <form action="logout.php" method="POST" class="inline">
           <button type="submit" class="bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition">
             <i class="fas fa-sign-out-alt mr-1"></i> Logout

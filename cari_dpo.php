@@ -13,18 +13,22 @@ $inst  = substr($inst, 0, 100);
 $where = [];
 $params = [];
 
-if ($nik !== '')  { $where[] = "nik = ?";             $params[] = $nik; }
-if ($nama !== '') { $where[] = "nama_lengkap ILIKE ?"; $params[] = "%$nama%"; }
-if ($inst !== '') { $where[] = "nama_instansi = ?";   $params[] = $inst; }
+if ($nik !== '')  { $where[] = "dpo.nik = ?";             $params[] = $nik; }
+if ($nama !== '') { $where[] = "dpo.nama_lengkap ILIKE ?"; $params[] = "%$nama%"; }
+if ($inst !== '') { $where[] = "instansi.nama_instansi ILIKE ?"; $params[] = "%$inst%"; }
 $whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
 // Prepared statement (hindari SQL injection)
 $sql = "SELECT dpo.nik, dpo.nama_lengkap, dpo.tanggal_lahir, dpo.jenis_kelamin,
-               dpo.nama_instansi, dpo.jenis_kasus, dpo.jenis_hukuman, dpo.status_dpo,
+               instansi.nama_instansi, jenis_kasus.jenis_kasus, jenis_hukuman.jenis_hukuman,
+               dpo.status_dpo,
                COALESCE(bounty.jumlah_bounty, 0) AS jumlah_bounty,
                dpo.foto
         FROM dpo
-        LEFT JOIN bounty ON bounty.id_kasus = CASE WHEN dpo.jenis_kasus ~ '^[0-9]+$' THEN dpo.jenis_kasus::int ELSE NULL END
+        LEFT JOIN instansi     ON instansi.id = dpo.instansi_id
+        LEFT JOIN jenis_kasus  ON jenis_kasus.id = dpo.jenis_kasus_id
+        LEFT JOIN jenis_hukuman ON jenis_hukuman.id = dpo.jenis_hukuman_id
+        LEFT JOIN bounty       ON bounty.id_kasus = dpo.jenis_kasus_id
         $whereSql
         ORDER BY dpo.created_at DESC
         LIMIT 1";
@@ -40,7 +44,7 @@ $row = $stmt->fetch();
 
 if ($row) {
     echo json_encode([
-        'status'      => 'success',
+        'status'        => 'success',
         'nama_lengkap'  => $row['nama_lengkap'],
         'tanggal_lahir' => $row['tanggal_lahir'],
         'jenis_kelamin' => $row['jenis_kelamin'],
@@ -56,4 +60,3 @@ if ($row) {
 } else {
     echo json_encode(['status' => 'not_found']);
 }
-

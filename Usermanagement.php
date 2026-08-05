@@ -2,10 +2,14 @@
 include 'Koneksi.php';
 include __DIR__.'/lib/audit_log.php';
 
-// Proteksi: hanya user login yang boleh kelola user
+// Proteksi: hanya user login dengan role admin
 session_start();
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
+    exit();
+}
+if (($_SESSION['role'] ?? '') !== 'admin') {
+    echo "<script>alert('Akses ditolak. Halaman ini khusus admin.');window.location='index.php';</script>";
     exit();
 }
 $page_title = 'Manajemen User';
@@ -24,12 +28,14 @@ include 'Header.php';
     $jumlah_saldo_bounty = preg_replace('/[^0-9]/', '', $_POST['jumlah_saldo_bounty'] ?? '0');
     $amount_saldo = preg_replace('/[^0-9]/', '', $_POST['amount_saldo'] ?? '0');
     $email = trim($_POST['email']);
+    $role = trim($_POST['role'] ?? 'operator');
+    if (!in_array($role, ['admin', 'operator'])) $role = 'operator';
     $createdBy = (int) ($_SESSION['user_id'] ?? 0);
 
     $stmt = $koneksidpogendeng->prepare(
-        "INSERT INTO \"user\" (username, password, fullname, jumlah_saldo_bounty, amount_saldo, email, created_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?)");
-    if ($stmt->execute([$username, $password, $fullname, $jumlah_saldo_bounty, $amount_saldo, $email, $createdBy])) {
+        "INSERT INTO \"user\" (username, password, fullname, jumlah_saldo_bounty, amount_saldo, email, role, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    if ($stmt->execute([$username, $password, $fullname, $jumlah_saldo_bounty, $amount_saldo, $email, $role, $createdBy])) {
         $newId = (int) $koneksidpogendeng->lastInsertId();
         log_audit('create', 'user', $newId, "Tambah user $username");
         echo '<div class="bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded-lg mt-3">Data berhasil disimpan!</div>';
@@ -46,10 +52,12 @@ include 'Header.php';
     $jumlah_saldo_bounty = preg_replace('/[^0-9]/', '', $_POST['jumlah_saldo_bounty'] ?? '0');
     $amount_saldo = preg_replace('/[^0-9]/', '', $_POST['amount_saldo'] ?? '0');
     $email = trim($_POST['email']);
+    $role = trim($_POST['role'] ?? 'operator');
+    if (!in_array($role, ['admin', 'operator'])) $role = 'operator';
     $updatedBy = (int) ($_SESSION['user_id'] ?? 0);
 
     $stmt = $koneksidpogendeng->prepare(
-        "UPDATE \"user\" SET username=?, fullname=?, jumlah_saldo_bounty=?, amount_saldo=?, email=?, updated_by=? WHERE id=?");
+        "UPDATE \"user\" SET username=?, fullname=?, jumlah_saldo_bounty=?, amount_saldo=?, email=?, role=?, updated_by=? WHERE id=?");
     if ($stmt->execute([$username, $fullname, $jumlah_saldo_bounty, $amount_saldo, $email, $updatedBy, $id])) {
         log_audit('update', 'user', $id, "Update user $username");
         echo '<div class="bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded-lg mt-3">Data berhasil diupdate!</div>';
@@ -67,6 +75,16 @@ include 'Header.php';
         echo '<div class="bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded-lg mt-3">Data berhasil dihapus!</div>';
     } else {
         echo '<div class="bg-red-100 border border-red-200 text-red-800 px-4 py-3 rounded-lg mt-3">Gagal menghapus data.</div>';
+    }
+  }
+
+  // Proses Buka Kunci Akun
+  if (isset($_GET['unlock'])) {
+    $id = (int) $_GET['unlock'];
+    $stmt = $koneksidpogendeng->prepare('UPDATE "user" SET failed_attempts = 0, locked_until = NULL WHERE id=?');
+    if ($stmt->execute([$id])) {
+        log_audit('update', 'user', $id, 'Buka kunci akun');
+        echo '<div class="bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded-lg mt-3">Akun berhasil dibuka kuncinya!</div>';
     }
   }
 
@@ -116,6 +134,13 @@ include 'Header.php';
       <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
       <input type="email" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" id="email" name="email" value="<?= $editData ? $editData['email'] : '' ?>">
     </div>
+    <div class="mb-3">
+      <label for="role" class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+      <select id="role" name="role" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+        <option value="operator" <?= $editData && $editData['role'] === 'operator' ? 'selected' : '' ?>>Operator</option>
+        <option value="admin" <?= $editData && $editData['role'] === 'admin' ? 'selected' : '' ?>>Admin</option>
+      </select>
+    </div>
 
     <?php if ($editData) { ?>
       <button type="submit" name="update" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold px-4 py-2 rounded-lg transition">Update</button>
@@ -137,6 +162,8 @@ include 'Header.php';
           <th class="px-3 py-2">Saldo Bounty</th>
           <th class="px-3 py-2">Amount Saldo</th>
           <th class="px-3 py-2">Email</th>
+          <th class="px-3 py-2">Role</th>
+          <th class="px-3 py-2">Status</th>
           <th class="px-3 py-2">Aksi</th>
         </tr>
       </thead>
@@ -145,6 +172,7 @@ include 'Header.php';
         $no = 1;
         $data = $koneksidpogendeng->query("SELECT * FROM \"user\" ORDER BY id DESC");
         while ($d = $data->fetch()) {
+            $isLocked = $d['locked_until'] && strtotime($d['locked_until']) > time();
         ?>
           <tr>
             <td class="px-3 py-2"><?= $no++ ?></td>
@@ -154,7 +182,24 @@ include 'Header.php';
             <td class="px-3 py-2"><?= 'Rp ' . number_format($d['amount_saldo'], 0, ',', '.') ?></td>
             <td class="px-3 py-2"><?= htmlspecialchars($d['email']) ?></td>
             <td class="px-3 py-2">
+              <?php if (($d['role'] ?? 'operator') === 'admin'): ?>
+                <span class="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded-full">ADMIN</span>
+              <?php else: ?>
+                <span class="bg-gray-100 text-gray-700 text-xs font-bold px-2 py-1 rounded-full">OPERATOR</span>
+              <?php endif; ?>
+            </td>
+            <td class="px-3 py-2">
+              <?php if ($isLocked): ?>
+                <span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-full">TERKUNCI</span>
+              <?php else: ?>
+                <span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full">AKTIF</span>
+              <?php endif; ?>
+            </td>
+            <td class="px-3 py-2">
               <a href="Usermanagement.php?edit=<?= $d['id'] ?>" class="bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-semibold px-3 py-1 rounded-lg transition">Edit</a>
+              <?php if ($isLocked): ?>
+                <a href="Usermanagement.php?unlock=<?= $d['id'] ?>" class="bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold px-3 py-1 rounded-lg transition">Unlock</a>
+              <?php endif; ?>
               <a href="Usermanagement.php?hapus=<?= $d['id'] ?>" class="bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-3 py-1 rounded-lg transition" onclick="return confirm('Yakin mau hapus?')">Hapus</a>
             </td>
           </tr>

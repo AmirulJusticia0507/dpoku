@@ -4,16 +4,16 @@ include 'Koneksi.php';
 if (isset($_POST['submit'])) {
     $nik             = $_POST['nik'];
     $nama_lengkap    = $_POST['nama_lengkap'];
-    $tanggal_lahir   = $_POST['tanggal_lahir'];
+    $tanggal_lahir   = $_POST['tanggal_lahir'] ?: null;
     $jenis_kelamin   = $_POST['jenis_kelamin'];
-    $nama_instansi   = $_POST['nama_instansi'];
-    $jenis_kasus     = $_POST['jenis_kasus'];
-    $jenis_hukuman   = $_POST['jenis_hukuman'];
+    $instansi_id     = (int) ($_POST['instansi_id'] ?? 0) ?: null;
+    $jenis_kasus_id  = (int) ($_POST['jenis_kasus_id'] ?? 0) ?: null;
+    $jenis_hukuman_id= (int) ($_POST['jenis_hukuman_id'] ?? 0) ?: null;
     $no_hp           = $_POST['no_hp'];
     $email           = $_POST['email'];
     $media_sosial    = $_POST['media_sosial'];
     $alamat          = $_POST['alamat'];
-    $status_dpo      = $_POST['status_dpo'];
+    $status_dpo      = $_POST['status_dpo'] ?: 'BURON';
 
     // Foto Upload + Frame
     $foto_name = $_FILES['foto']['name'] ?? '';
@@ -44,7 +44,7 @@ if (isset($_POST['submit'])) {
 
     // Verifikasi MIME via getimagesize (bukan hanya ekstensi)
     $imageInfo = @getimagesize($foto_tmp);
-    if ($imageInfo === false || !isset($allowedExt[$imageInfo['mime']])) {
+    if ($imageInfo === false || !in_array($imageInfo['mime'], $allowedExt, true)) {
         die("<script>alert('File bukan gambar yang valid.'); window.history.back();</script>");
     }
 
@@ -57,7 +57,11 @@ if (isset($_POST['submit'])) {
     $target_file = $upload_dir . bin2hex(random_bytes(8)) . '_' . time() . '.jpg';
 
     // Simpan original foto dulu (convert ke JPG agar konsisten dengan GD frame)
-    $uploaded_image = ($imageInfo[2] === IMAGETYPE_PNG) ? imagecreatefrompng($foto_tmp) : imagecreatefromjpeg($foto_tmp);
+    $uploaded_image = match ($imageInfo[2]) {
+        IMAGETYPE_PNG  => @imagecreatefrompng($foto_tmp),
+        IMAGETYPE_WEBP => @imagecreatefromwebp($foto_tmp),
+        default        => @imagecreatefromjpeg($foto_tmp),
+    };
     if (!$uploaded_image) {
         die("<script>alert('Gagal memproses gambar.'); window.history.back();</script>");
     }
@@ -105,19 +109,24 @@ if (isset($_POST['submit'])) {
     }
 
     $stmt = $koneksidpogendeng->prepare(
-        "INSERT INTO dpo (nik, nama_lengkap, tanggal_lahir, jenis_kelamin, nama_instansi,
-                jenis_kasus, jenis_hukuman, no_hp, email, media_sosial, alamat, status_dpo, foto, created_by)
+        "INSERT INTO dpo (nik, nama_lengkap, tanggal_lahir, jenis_kelamin, instansi_id,
+                jenis_kasus_id, jenis_hukuman_id, no_hp, email, media_sosial, alamat, status_dpo, foto, created_by)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     $stmt->execute([
-        $nik, $nama_lengkap, $tanggal_lahir ?: null, $jenis_kelamin,
-        $nama_instansi, $jenis_kasus, $jenis_hukuman, $no_hp, $email, $media_sosial,
+        $nik, $nama_lengkap, $tanggal_lahir, $jenis_kelamin,
+        $instansi_id, $jenis_kasus_id, $jenis_hukuman_id, $no_hp, $email, $media_sosial,
         $alamat, $status_dpo, $framed_file, $createdBy,
     ]);
 
     if ($stmt->rowCount() > 0) {
         $newId = (int) $koneksidpogendeng->lastInsertId();
         include __DIR__.'/lib/audit_log.php';
-        log_audit('create', 'dpo', $newId, "Tambah DPO NIK=$nik nama=$nama_lengkap instansi=$nama_instansi");
+        log_audit('create', 'dpo', $newId, "Tambah DPO NIK=$nik nama=$nama_lengkap status=$status_dpo");
+
+        // Catat riwayat status awal
+        $log = $koneksidpogendeng->prepare("INSERT INTO dpo_status_log (dpo_id, status_lama, status_baru, changed_by) VALUES (?, ?, ?, ?)");
+        $log->execute([$newId, 'BARU', $status_dpo, $createdBy]);
+
         echo "<script>alert('Data DPO berhasil ditambahkan!'); window.location.href='inputdpo.php';</script>";
     } else {
         echo "Error: insert gagal";
