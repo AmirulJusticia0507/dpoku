@@ -184,3 +184,94 @@ INSERT INTO jenis_hukuman (jenis_hukuman, lama_hukuman, vonis_putusan, status) V
 ('Percobaan', '2 tahun', 'Hukuman percobaan 2 tahun', 'Aktif'),
 ('Restitusi', 'Rp250.000.000', 'Kewajiban membayar ganti rugi 250 juta', 'Aktif')
 ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- SEED BOUNTY per jenis kasus (idempotent: hanya jika belum ada)
+-- ============================================================
+INSERT INTO bounty (jumlah_bounty, id_kasus)
+SELECT v.jumlah, k.id
+FROM (VALUES
+    ('Korupsi',              100000000),
+    ('Pembunuhan',           150000000),
+    ('Narkotika',             75000000),
+    ('Pencucian Uang',       100000000),
+    ('Penipuan',              25000000),
+    ('Perampokan',            50000000),
+    ('Terorisme',            200000000),
+    ('Penculikan Anak',       60000000),
+    ('Pembunuhan Berat',     175000000),
+    ('Penggelapan',           30000000),
+    ('Perdagangan Orang',     80000000),
+    ('Cyber Crime',           40000000)
+) AS v(jenis, jumlah)
+JOIN jenis_kasus k ON k.jenis_kasus = v.jenis
+WHERE NOT EXISTS (SELECT 1 FROM bounty b WHERE b.id_kasus = k.id);
+
+-- ============================================================
+-- SEED DATA DPO contoh (fiktif) - ON CONFLICT (nik) DO NOTHING
+-- ============================================================
+INSERT INTO dpo
+(nik, nama_lengkap, tanggal_lahir, jenis_kelamin, instansi_id, jenis_kasus_id, jenis_hukuman_id,
+ no_hp, email, media_sosial, alamat, status_dpo)
+SELECT
+    '3201011508910001', 'Bagus Pratama', '1991-08-15', 'LAKI-LAKI',
+    (SELECT id FROM instansi WHERE nama_instansi = 'Kejaksaan Agung' LIMIT 1),
+    (SELECT id FROM jenis_kasus WHERE jenis_kasus = 'Korupsi' LIMIT 1),
+    (SELECT id FROM jenis_hukuman WHERE jenis_hukuman = 'Pidana Penjara' AND lama_hukuman = '10 tahun' LIMIT 1),
+    '081234567801', 'bagus.pratama@example.com', 'fb.com/bagus', 'Jl. Melati No. 12, Bogor', 'BURON'
+ON CONFLICT (nik) DO NOTHING;
+
+INSERT INTO dpo
+(nik, nama_lengkap, tanggal_lahir, jenis_kelamin, instansi_id, jenis_kasus_id, jenis_hukuman_id,
+ no_hp, email, media_sosial, alamat, status_dpo)
+SELECT
+    '3173027109850002', 'Siti Rahayu', '1985-11-01', 'PEREMPUAN',
+    (SELECT id FROM instansi WHERE nama_instansi = 'Kepolisian RI' LIMIT 1),
+    (SELECT id FROM jenis_kasus WHERE jenis_kasus = 'Penipuan' LIMIT 1),
+    (SELECT id FROM jenis_hukuman WHERE jenis_hukuman = 'Pidana Penjara' AND lama_hukuman = '5 tahun' LIMIT 1),
+    '081234567802', 'siti.rahayu@example.com', 'ig.com/sitirahayu', 'Jl. Kenanga No. 5, Jakarta Timur', 'BURON'
+ON CONFLICT (nik) DO NOTHING;
+
+INSERT INTO dpo
+(nik, nama_lengkap, tanggal_lahir, jenis_kelamin, instansi_id, jenis_kasus_id, jenis_hukuman_id,
+ no_hp, email, media_sosial, alamat, status_dpo)
+SELECT
+    '3501021207930003', 'Andri Firmansyah', '1993-07-12', 'LAKI-LAKI',
+    (SELECT id FROM instansi WHERE nama_instansi = 'Kepolisian RI' LIMIT 1),
+    (SELECT id FROM jenis_kasus WHERE jenis_kasus = 'Narkotika' LIMIT 1),
+    (SELECT id FROM jenis_hukuman WHERE jenis_hukuman = 'Pidana Penjara' AND lama_hukuman = '15 tahun' LIMIT 1),
+    '081234567803', 'andri.f@example.com', 'ig.com/andrif', 'Jl. Mawar No. 8, Malang', 'TERTANGKAP'
+ON CONFLICT (nik) DO NOTHING;
+
+INSERT INTO dpo
+(nik, nama_lengkap, tanggal_lahir, jenis_kelamin, instansi_id, jenis_kasus_id, jenis_hukuman_id,
+ no_hp, email, media_sosial, alamat, status_dpo)
+SELECT
+    '3674032507880004', 'Rudi Hartono', '1988-03-25', 'LAKI-LAKI',
+    (SELECT id FROM instansi WHERE nama_instansi = 'Kepolisian RI' LIMIT 1),
+    (SELECT id FROM jenis_kasus WHERE jenis_kasus = 'Pembunuhan' LIMIT 1),
+    (SELECT id FROM jenis_hukuman WHERE jenis_hukuman = 'Seumur Hidup' LIMIT 1),
+    '081234567804', 'rudi.h@example.com', 'fb.com/rudi', 'Jl. Flamboyan No. 3, Depok', 'BURON'
+ON CONFLICT (nik) DO NOTHING;
+
+INSERT INTO dpo
+(nik, nama_lengkap, tanggal_lahir, jenis_kelamin, instansi_id, jenis_kasus_id, jenis_hukuman_id,
+ no_hp, email, media_sosial, alamat, status_dpo)
+SELECT
+    '3301045209900005', 'Dewi Lestari', '1990-10-12', 'PEREMPUAN',
+    (SELECT id FROM instansi WHERE nama_instansi = 'Kejaksaan Agung' LIMIT 1),
+    (SELECT id FROM jenis_kasus WHERE jenis_kasus = 'Pencucian Uang' LIMIT 1),
+    (SELECT id FROM jenis_hukuman WHERE jenis_hukuman = 'Pidana Penjara' AND lama_hukuman = '7 tahun' LIMIT 1),
+    '081234567805', 'dewi.lestari@example.com', 'ig.com/dewi', 'Jl. Anggrek No. 21, Semarang', 'BURON'
+ON CONFLICT (nik) DO NOTHING;
+
+INSERT INTO dpo
+(nik, nama_lengkap, tanggal_lahir, jenis_kelamin, instansi_id, jenis_kasus_id, jenis_hukuman_id,
+ no_hp, email, media_sosial, alamat, status_dpo)
+SELECT
+    '3515071005900006', 'Joko Santoso', '1990-05-10', 'LAKI-LAKI',
+    (SELECT id FROM instansi WHERE nama_instansi = 'Kepolisian RI' LIMIT 1),
+    (SELECT id FROM jenis_kasus WHERE jenis_kasus = 'Penculikan Anak' LIMIT 1),
+    (SELECT id FROM jenis_hukuman WHERE jenis_hukuman = 'Pidana Penjara' AND lama_hukuman = '20 tahun' LIMIT 1),
+    '081234567806', 'joko.s@example.com', 'fb.com/joko', 'Jl. Cemara No. 9, Surabaya', 'MENINGGAL DUNIA'
+ON CONFLICT (nik) DO NOTHING;
