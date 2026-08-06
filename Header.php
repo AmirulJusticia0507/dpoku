@@ -7,6 +7,7 @@ $current    = basename($_SERVER['PHP_SELF']);
 $navItems = [
     ['href' => 'index.php',              'icon' => 'fas fa-tachometer-alt', 'label' => 'Dashboard'],
     ['href' => 'Inputdpo.php',           'icon' => 'fas fa-user-secret',    'label' => 'Input DPO'],
+    ['href' => 'laporan_dpo.php',        'icon' => 'fas fa-file-alt',       'label' => 'Laporan DPO'],
     ['href' => 'daftar_pejabat.php',     'icon' => 'fas fa-id-badge',       'label' => 'Daftar Pejabat'],
     ['href' => 'Inputinstansi.php',      'icon' => 'fas fa-building',       'label' => 'Input Instansi'],
     ['href' => 'Inputjeniskasus.php',    'icon' => 'fas fa-gavel',          'label' => 'Input Jenis Kasus'],

@@ -1,30 +1,30 @@
 <?php
 // lib/simple_pdf.php - Generator PDF minimal (tanpa library eksternal)
-// Mendukung teks + embed gambar JPEG. Cukup untuk poster WANTED.
+// Mendukung teks + embed gambar JPEG + multi-halaman.
+// API: text(), textCenter(), imageJpeg(), wrap(), textWidth(), newPage(), output()
 
 class SimplePDF
 {
     public $w = 595.28;   // A4 width (pt)
     public $h = 841.89;   // A4 height (pt)
 
-    private $n = 0;             // total object count
-    private $content = '';      // content stream halaman
-    private $imageObjects = []; // {id, data, w, h, bpc, filters}
-    private $contentId;
-    private $fontId;
-    private $pageId;
-    private $pagesId;
+    private $pages = [];        // kumpulan content stream per halaman
+    private $cur = '';          // content stream halaman aktif
+    private $imageObjects = []; // {stream, w, h, bpc, filters}
 
     public function __construct($w = 595.28, $h = 841.89)
     {
         $this->w = $w;
         $this->h = $h;
-        // 1 = catalog, 2 = pages, 3 = page, 4 = font, 5 = content
-        $this->n = 5;
-        $this->contentId = 5;
-        $this->fontId = 4;
-        $this->pageId = 3;
-        $this->pagesId = 2;
+    }
+
+    // Tutup halaman aktif (jika ada isi) dan mulai halaman baru
+    public function newPage()
+    {
+        if ($this->cur !== '') {
+            $this->pages[] = $this->cur;
+            $this->cur = '';
+        }
     }
 
     private function esc($s)
@@ -34,7 +34,34 @@ class SimplePDF
 
     private function addCmd($cmd)
     {
-        $this->content .= $cmd . "\n";
+        $this->cur .= $cmd . "\n";
+    }
+
+    // Estimasi lebar teks dalam pt (Helvetica, factor rata-rata)
+    public function textWidth($text, $size)
+    {
+        return mb_strlen($text) * $size * 0.5;
+    }
+
+    // Pecah teks jadi baris-baris yang muat dalam maxWidth (pt)
+    public function wrap($text, $size, $maxWidth)
+    {
+        $text = trim($text);
+        if ($text === '') return [''];
+        $words = preg_split('/\s+/u', $text);
+        $lines = [];
+        $line = '';
+        foreach ($words as $w) {
+            $cand = $line === '' ? $w : $line . ' ' . $w;
+            if ($this->textWidth($cand, $size) <= $maxWidth || $line === '') {
+                $line = $cand;
+            } else {
+                $lines[] = $line;
+                $line = $w;
+            }
+        }
+        if ($line !== '') $lines[] = $line;
+        return $lines;
     }
 
     // Teks di posisi (x,y) dari kiri-atas (pt)
@@ -63,8 +90,8 @@ class SimplePDF
         $imgH = $info[1] ?? 100;
         $height = $width * $imgH / $imgW;
 
-        $id = ++$this->n;
-        $this->imageObjects[$id] = [
+        $key = 'img' . (count($this->imageObjects) + 1);
+        $this->imageObjects[$key] = [
             'stream' => $data,
             'w' => $imgW,
             'h' => $imgH,
@@ -72,13 +99,31 @@ class SimplePDF
             'filters' => '/DCTDecode',
         ];
         $this->addCmd(sprintf(
-            "q %.2f 0 0 %.2f %.2f %.2f cm /Im%d Do Q",
-            $width, $height, $x, $this->h - $y - $height, $id
+            "q %.2f 0 0 %.2f %.2f %.2f cm /%s Do Q",
+            $width, $height, $x, $this->h - $y - $height, $key
         ));
     }
 
     public function output($filename = null)
     {
+        if ($this->cur !== '') {
+            $this->pages[] = $this->cur;
+            $this->cur = '';
+        }
+
+        $nPages = count($this->pages);
+        if ($nPages === 0) $nPages = 1; // halaman kosong tetap valid
+
+        // Alokasikan object id
+        $pagesTreeId = 2;
+        $pageIds = range(3, 2 + $nPages);
+        $fontId = 3 + $nPages;
+        $contentIds = range($fontId + 1, $fontId + $nPages);
+        $imgKeys = array_keys($this->imageObjects);
+        $imgIds = [];
+        $next = $fontId + $nPages + 1;
+        foreach ($imgKeys as $k) $imgIds[$k] = $next++;
+
         $pdf = "%PDF-1.4\n";
         $offsets = [];
 
@@ -92,39 +137,43 @@ class SimplePDF
         };
 
         // 1: Catalog
-        $emit(1, "<< /Type /Catalog /Pages 2 0 R >>");
+        $emit(1, "<< /Type /Catalog /Pages $pagesTreeId 0 R >>");
 
-        // 2: Pages
-        $emit(2, sprintf("<< /Type /Pages /Kids [%d 0 R] /Count 1 >>", $this->pageId));
+        // 2: Pages tree
+        $kids = implode(' ', array_map(fn($id) => "$id 0 R", $pageIds));
+        $emit($pagesTreeId, "<< /Type /Pages /Kids [$kids] /Count $nPages >>");
 
-        // 3: Page
+        // 3..: halaman
         $xobjects = '/XObject <<';
-        foreach ($this->imageObjects as $id => $obj) {
-            $xobjects .= " /Im$id $id 0 R";
-        }
+        foreach ($imgIds as $k => $id) $xobjects .= " /$k $id 0 R";
         $xobjects .= ' >>';
-        $emit(3, sprintf(
-            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %.2f %.2f] /Resources << /Font << /F1 %d 0 R >> %s >> /Contents %d 0 R >>",
-            $this->w, $this->h, $this->fontId, $xobjects, $this->contentId
-        ));
+        foreach ($pageIds as $i => $pid) {
+            $emit($pid, sprintf(
+                "<< /Type /Page /Parent $pagesTreeId 0 R /MediaBox [0 0 %.2f %.2f] /Resources << /Font << /F1 $fontId 0 R >> %s >> /Contents %d 0 R >>",
+                $this->w, $this->h, $xobjects, $contentIds[$i]
+            ));
+        }
 
-        // 4: Font
-        $emit(4, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
+        // Font
+        $emit($fontId, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
 
-        // 5: Content stream
-        $emit(5, sprintf("<< /Length %d >>", strlen($this->content)), $this->content);
+        // Content streams
+        foreach ($contentIds as $i => $cid) {
+            $body = ($i < count($this->pages)) ? $this->pages[$i] : '';
+            $emit($cid, sprintf("<< /Length %d >>", strlen($body)), $body);
+        }
 
-        // 6+: Images
-        foreach ($this->imageObjects as $id => $obj) {
-            $body = sprintf(
+        // Images
+        foreach ($imgIds as $k => $id) {
+            $o = $this->imageObjects[$k];
+            $emit($id, sprintf(
                 "<< /Type /XObject /Subtype /Image /Width %d /Height %d /ColorSpace /DeviceRGB /BitsPerComponent %d /Filter %s /Length %d >>",
-                $obj['w'], $obj['h'], $obj['bpc'], $obj['filters'], strlen($obj['stream'])
-            );
-            $emit($id, $body, $obj['stream']);
+                $o['w'], $o['h'], $o['bpc'], $o['filters'], strlen($o['stream'])
+            ), $o['stream']);
         }
 
         // xref
-        $count = $this->n + 1;
+        $count = $next;
         $xrefPos = strlen($pdf);
         $pdf .= "xref\n0 $count\n0000000000 65535 f \n";
         for ($i = 1; $i < $count; $i++) {
