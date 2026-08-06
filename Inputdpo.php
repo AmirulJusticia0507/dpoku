@@ -32,7 +32,10 @@ $hukuman = $koneksidpogendeng->query("SELECT * FROM jenis_hukuman");
         <label class="block text-sm font-medium text-gray-700 mb-1">Masukkan NIK</label>
         <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2 focus:ring-2 focus:ring-blue-500 outline-none" id="nik" placeholder="Masukkan NIK">
         <label class="block text-sm font-medium text-gray-700 mb-1">Masukkan Nama</label>
-        <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2 focus:ring-2 focus:ring-blue-500 outline-none" id="nama" placeholder="Masukkan Nama">
+        <div class="relative">
+          <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2 focus:ring-2 focus:ring-blue-500 outline-none" id="nama" placeholder="Masukkan Nama" autocomplete="off">
+          <div id="saranPejabat" class="hidden absolute z-10 left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"></div>
+        </div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Masukkan Nama Instansi</label>
         <select class="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2 focus:ring-2 focus:ring-blue-500 outline-none" id="instansi">
           <option value="">-- Pilih Instansi --</option>
@@ -163,6 +166,46 @@ $hukuman = $koneksidpogendeng->query("SELECT * FROM jenis_hukuman");
     document.getElementById('instansi').value = '';
     document.getElementById('fotoDPO').src = 'https://via.placeholder.com/150';
     document.getElementById('hasilDPO').innerHTML = '';
+    document.getElementById('saranPejabat').classList.add('hidden');
+  });
+
+  // Autocomplete nama dari daftar_pejabat
+  var debounceTimer;
+  var saranBox = document.getElementById('saranPejabat');
+  var namaInput = document.getElementById('nama');
+
+  namaInput.addEventListener('input', function () {
+    clearTimeout(debounceTimer);
+    var q = namaInput.value.trim();
+    if (q.length < 3) { saranBox.classList.add('hidden'); return; }
+    debounceTimer = setTimeout(function () {
+      fetch('cari_pejabat.php?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (list) {
+          if (!list.length) { saranBox.classList.add('hidden'); return; }
+          saranBox.innerHTML = list.map(function (p) {
+            return '<button type="button" class="w-full text-left px-4 py-2 hover:bg-gray-100 border-b border-gray-100" ' +
+                   'data-nama="' + p.nama.replace(/"/g, '&quot;') + '">' +
+                   '<span class="font-semibold text-gray-800">' + p.nama + '</span><br>' +
+                   '<span class="text-xs text-gray-500">' + p.jabatan + ' — ' + p.instansi + ' (' + p.sumber + ')</span>' +
+                   '</button>';
+          }).join('');
+          saranBox.classList.remove('hidden');
+        });
+    }, 250);
+  });
+
+  saranBox.addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-nama]');
+    if (!btn) return;
+    namaInput.value = btn.getAttribute('data-nama');
+    saranBox.classList.add('hidden');
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('#nama') && !e.target.closest('#saranPejabat')) {
+      saranBox.classList.add('hidden');
+    }
   });
 </script>
 
