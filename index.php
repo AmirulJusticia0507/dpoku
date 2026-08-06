@@ -8,6 +8,7 @@ include 'Header.php';
 $totalDpo   = (int) $koneksidpogendeng->query("SELECT COUNT(*) FROM dpo")->fetchColumn();
 $totalBuron = (int) $koneksidpogendeng->query("SELECT COUNT(*) FROM dpo WHERE status_dpo='BURON'")->fetchColumn();
 $totalTertangkap = (int) $koneksidpogendeng->query("SELECT COUNT(*) FROM dpo WHERE status_dpo='TERTANGKAP'")->fetchColumn();
+$totalMeninggal  = (int) $koneksidpogendeng->query("SELECT COUNT(*) FROM dpo WHERE status_dpo='MENINGGAL DUNIA'")->fetchColumn();
 $totalBounty = (int) $koneksidpogendeng->query("SELECT COALESCE(SUM(jumlah_bounty),0) FROM bounty")->fetchColumn();
 $totalKasus = (int) $koneksidpogendeng->query("SELECT COUNT(*) FROM jenis_kasus")->fetchColumn();
 $totalUser  = (int) $koneksidpogendeng->query("SELECT COUNT(*) FROM \"user\"")->fetchColumn();
@@ -21,15 +22,6 @@ $topInstansiPejabat = $koneksidpogendeng->query(
     "SELECT instansi, COUNT(*) AS jumlah
      FROM daftar_pejabat WHERE instansi <> '' AND instansi <> 'TIDAK DIKETAHUI'
      GROUP BY instansi ORDER BY jumlah DESC LIMIT 5"
-)->fetchAll();
-
-// Kasus teratas
-$topKasus = $koneksidpogendeng->query(
-    "SELECT jenis_kasus.jenis_kasus, COUNT(dpo.id) AS jumlah
-     FROM jenis_kasus
-     LEFT JOIN dpo ON dpo.jenis_kasus_id = jenis_kasus.id
-     GROUP BY jenis_kasus.id
-     ORDER BY jumlah DESC LIMIT 5"
 )->fetchAll();
 
 // Daftar DPO (JOIN FK + bounty)
@@ -51,28 +43,28 @@ $dpoList = $koneksidpogendeng->query(
   <div class="bg-white rounded-xl shadow p-5 flex items-center gap-4">
     <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xl"><i class="fas fa-user-secret"></i></div>
     <div>
-      <p class="text-2xl font-bold text-gray-800"><?= $totalDpo ?></p>
+      <p id="totalDpo" class="text-2xl font-bold text-gray-800"><?= $totalDpo ?></p>
       <p class="text-sm text-gray-500">Total DPO</p>
     </div>
   </div>
   <div class="bg-white rounded-xl shadow p-5 flex items-center gap-4">
     <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-600 text-xl"><i class="fas fa-fire"></i></div>
     <div>
-      <p class="text-2xl font-bold text-gray-800"><?= $totalBuron ?></p>
+      <p id="totalBuron" class="text-2xl font-bold text-gray-800"><?= $totalBuron ?></p>
       <p class="text-sm text-gray-500">BURON</p>
     </div>
   </div>
   <div class="bg-white rounded-xl shadow p-5 flex items-center gap-4">
     <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-600 text-xl"><i class="fas fa-handcuffs"></i></div>
     <div>
-      <p class="text-2xl font-bold text-gray-800"><?= $totalTertangkap ?></p>
+      <p id="totalTertangkap" class="text-2xl font-bold text-gray-800"><?= $totalTertangkap ?></p>
       <p class="text-sm text-gray-500">TERTANGKAP</p>
     </div>
   </div>
   <div class="bg-white rounded-xl shadow p-5 flex items-center gap-4">
     <div class="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600 text-xl"><i class="fas fa-money-bill-wave"></i></div>
     <div>
-      <p class="text-2xl font-bold text-gray-800">Rp <?= number_format($totalBounty, 0, ',', '.') ?></p>
+      <p id="totalBounty" class="text-2xl font-bold text-gray-800">Rp <?= number_format($totalBounty, 0, ',', '.') ?></p>
       <p class="text-sm text-gray-500">Total Bounty</p>
     </div>
   </div>
@@ -126,30 +118,29 @@ $dpoList = $koneksidpogendeng->query(
   </div>
 </div>
 
-<!-- ===================== KASUS TERATAS ===================== -->
+<!-- ===================== GRAFIK ===================== -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
   <div class="bg-white rounded-xl shadow p-5">
+    <h4 class="font-bold text-gray-800 mb-3">Distribusi Status</h4>
+    <div class="h-64 relative"><canvas id="chartStatus"></canvas></div>
+  </div>
+  <div class="bg-white rounded-xl shadow p-5">
     <h4 class="font-bold text-gray-800 mb-3">Kasus Terbanyak</h4>
-    <?php foreach ($topKasus as $tk): ?>
-      <div class="flex justify-between items-center py-2 border-b border-gray-100 text-sm">
-        <span class="text-gray-700"><?= htmlspecialchars($tk['jenis_kasus']) ?></span>
-        <span class="font-bold text-gray-800"><?= (int) $tk['jumlah'] ?></span>
-      </div>
-    <?php endforeach; ?>
+    <div class="h-64 relative"><canvas id="chartKasus"></canvas></div>
   </div>
-  <div class="bg-white rounded-xl shadow p-5 lg:col-span-2">
-    <h4 class="font-bold text-gray-800 mb-3">Ringkasan Status</h4>
-    <div class="space-y-3">
-      <div>
-        <div class="flex justify-between text-sm mb-1"><span class="text-gray-600">BURON</span><span class="font-bold"><?= $totalBuron ?> (<?= $totalDpo ? round($totalBuron / $totalDpo * 100) : 0 ?>%)</span></div>
-        <div class="h-2.5 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-red-600 rounded-full" style="width: <?= $totalDpo ? round($totalBuron / $totalDpo * 100) : 0 ?>%"></div></div>
-      </div>
-      <div>
-        <div class="flex justify-between text-sm mb-1"><span class="text-gray-600">TERTANGKAP</span><span class="font-bold"><?= $totalTertangkap ?> (<?= $totalDpo ? round($totalTertangkap / $totalDpo * 100) : 0 ?>%)</span></div>
-        <div class="h-2.5 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-green-600 rounded-full" style="width: <?= $totalDpo ? round($totalTertangkap / $totalDpo * 100) : 0 ?>%"></div></div>
-      </div>
-    </div>
+  <div class="bg-white rounded-xl shadow p-5">
+    <h4 class="font-bold text-gray-800 mb-3">DPO per Instansi</h4>
+    <div class="h-64 relative"><canvas id="chartInstansi"></canvas></div>
   </div>
+</div>
+
+<!-- ===================== PROGRES REAL-TIME ===================== -->
+<div class="bg-white rounded-xl shadow p-5 mb-6">
+  <div class="flex flex-wrap justify-between items-center mb-3 gap-2">
+    <h4 class="font-bold text-gray-800">Progres Penangkapan (6 Bulan)</h4>
+    <span class="text-xs text-gray-400">Auto-refresh setiap 30 detik · terakhir <span id="lastUpdate">-</span></span>
+  </div>
+  <div class="h-64 relative"><canvas id="chartProgres"></canvas></div>
 </div>
 
 <!-- ===================== DAFTAR DPO ===================== -->
@@ -207,12 +198,91 @@ $dpoList = $koneksidpogendeng->query(
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
   $(document).ready(function () {
     $('#dpoTable').DataTable({
       order: [[1, 'asc']],
       language: { url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/id.json' }
     });
+
+    var colorStatus = {
+      'BURON': '#dc2626',
+      'TERTANGKAP': '#16a34a',
+      'MENINGGAL DUNIA': '#6b7280'
+    };
+    var chartStatus, chartKasus, chartInstansi, chartProgres;
+
+    function render(data) {
+      var d = data.status || { labels: [], data: [] };
+      var ds = data.counts || {};
+
+      $('#totalDpo').text(ds.totalDpo ?? 0);
+      $('#totalBuron').text(ds.totalBuron ?? 0);
+      $('#totalTertangkap').text(ds.totalTertangkap ?? 0);
+      $('#totalBounty').text('Rp ' + Number(ds.totalBounty ?? 0).toLocaleString('id-ID'));
+      $('#lastUpdate').text(data.lastUpdate || '-');
+
+      var statusColors = (d.labels || []).map(function (l) { return colorStatus[l] || '#6b7280'; });
+
+      if (!chartStatus) {
+        chartStatus = new Chart(document.getElementById('chartStatus'), {
+          type: 'doughnut',
+          data: { labels: d.labels, datasets: [{ data: d.data, backgroundColor: statusColors, borderWidth: 2 }] },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+        });
+      } else {
+        chartStatus.data.labels = d.labels;
+        chartStatus.data.datasets[0].data = d.data;
+        chartStatus.data.datasets[0].backgroundColor = statusColors;
+        chartStatus.update();
+      }
+
+      if (!chartKasus) {
+        chartKasus = new Chart(document.getElementById('chartKasus'), {
+          type: 'bar',
+          data: { labels: data.kasus.labels, datasets: [{ label: 'Jumlah', data: data.kasus.data, backgroundColor: '#3b82f6' }] },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+        });
+      } else {
+        chartKasus.data.labels = data.kasus.labels;
+        chartKasus.data.datasets[0].data = data.kasus.data;
+        chartKasus.update();
+      }
+
+      if (!chartInstansi) {
+        chartInstansi = new Chart(document.getElementById('chartInstansi'), {
+          type: 'bar',
+          data: { labels: data.instansi.labels, datasets: [{ label: 'Jumlah', data: data.instansi.data, backgroundColor: '#8b5cf6' }] },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+        });
+      } else {
+        chartInstansi.data.labels = data.instansi.labels;
+        chartInstansi.data.datasets[0].data = data.instansi.data;
+        chartInstansi.update();
+      }
+
+      if (!chartProgres) {
+        chartProgres = new Chart(document.getElementById('chartProgres'), {
+          type: 'line',
+          data: { labels: data.progres.labels, datasets: [{ label: 'Tertangkap', data: data.progres.data, borderColor: '#16a34a', backgroundColor: 'rgba(22,163,74,0.15)', fill: true, tension: 0.3 }] },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+        });
+      } else {
+        chartProgres.data.labels = data.progres.labels;
+        chartProgres.data.datasets[0].data = data.progres.data;
+        chartProgres.update();
+      }
+    }
+
+    function loadData() {
+      $.getJSON('api_dashboard.php', render).fail(function () {
+        $('#lastUpdate').text('gagal memuat');
+      });
+    }
+
+    loadData();
+    setInterval(loadData, 30000);
   });
 </script>
 

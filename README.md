@@ -97,6 +97,7 @@ melalui URL untuk role yang tidak diizinkan (`session.php`, `Header.php`).
 ## Fitur
 
 - Login dengan rate-limiting (anti brute-force)
+- Dashboard dengan grafik Chart.js (distribusi status, kasus, instansi, progres penangkapan 6 bulan — auto-refresh 30 detik)
 - Role-based access: admin / operator / viewer (read-only)
 - CRUD DPO, instansi, jenis kasus, jenis hukuman, user, bounty
 - Pencarian DPO (NIK, nama, instansi) + autocomplete
