@@ -36,3 +36,11 @@ foreach ($rows as $r) {
 echo "Imported: $total baris\n";
 $c = $koneksidpogendeng->query('SELECT sumber, COUNT(*) FROM daftar_pejabat GROUP BY sumber ORDER BY sumber');
 foreach ($c as $row) echo "  {$row['sumber']}: {$row['count']}\n";
+
+// Isi tabel instansi dari nilai unik daftar_pejabat (idempotent)
+$ins = $koneksidpogendeng->exec(
+    "INSERT INTO instansi (nama_instansi)
+     SELECT DISTINCT instansi FROM daftar_pejabat WHERE instansi <> '' AND instansi <> 'TIDAK DIKETAHUI'
+     ON CONFLICT DO NOTHING"
+);
+echo "Instansi ditambahkan ke tabel instansi: $ins\n";
