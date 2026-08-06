@@ -108,6 +108,16 @@ CREATE TABLE IF NOT EXISTS audit_log (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS daftar_pejabat (
+    id SERIAL PRIMARY KEY,
+    nama VARCHAR(255) NOT NULL DEFAULT '',
+    jabatan VARCHAR(255) NOT NULL DEFAULT '',
+    instansi VARCHAR(255) NOT NULL DEFAULT '',
+    keterangan VARCHAR(500) NOT NULL DEFAULT '',
+    sumber VARCHAR(20) NOT NULL DEFAULT '',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Index untuk pencarian umum
 CREATE INDEX IF NOT EXISTS idx_dpo_nik ON dpo (nik);
 CREATE INDEX IF NOT EXISTS idx_dpo_nama ON dpo (nama_lengkap);
@@ -115,6 +125,9 @@ CREATE INDEX IF NOT EXISTS idx_dpo_instansi ON dpo (instansi_id);
 CREATE INDEX IF NOT EXISTS idx_dpo_status ON dpo (status_dpo);
 CREATE INDEX IF NOT EXISTS idx_bukti_dpo ON barang_bukti (dpo_id);
 CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log (action);
+CREATE INDEX IF NOT EXISTS idx_pejabat_nama ON daftar_pejabat (nama);
+CREATE INDEX IF NOT EXISTS idx_pejabat_instansi ON daftar_pejabat (instansi);
+CREATE INDEX IF NOT EXISTS idx_pejabat_sumber ON daftar_pejabat (sumber);
 
 -- ============================================================
 -- SEED DATA
