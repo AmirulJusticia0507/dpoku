@@ -1,5 +1,15 @@
 <?php
+include 'session.php';
 include 'Koneksi.php';
+
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+if (is_viewer()) {
+    header("Location: index.php");
+    exit();
+}
 
 if (isset($_POST['submit'])) {
     $nik             = $_POST['nik'];

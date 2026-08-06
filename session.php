@@ -18,4 +18,12 @@ if (isset($_SESSION['user_id'])) {
     }
     $_SESSION['last_activity'] = time();
 }
+
+// Role "viewer" hanya boleh melihat data (read-only), tidak menambah/mengubah/menghapus.
+if (!function_exists('is_viewer')) {
+    function is_viewer(): bool
+    {
+        return (($_SESSION['role'] ?? 'operator') === 'viewer');
+    }
+}
 ?>

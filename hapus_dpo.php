@@ -6,6 +6,10 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
+if (is_viewer()) {
+    header("Location: index.php");
+    exit();
+}
 
 $id = (int) ($_GET['id'] ?? 0);
 if ($id <= 0) {

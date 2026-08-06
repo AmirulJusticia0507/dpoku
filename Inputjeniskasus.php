@@ -1,4 +1,8 @@
-<?php include 'Koneksi.php'; ?>
+<?php
+include 'Koneksi.php';
+include 'session.php';
+if (is_viewer()) { header("Location: index.php"); exit; }
+?>
 <?php $page_title = 'Form Input Jenis Kasus'; ?>
 <?php include 'Header.php'; ?>
 

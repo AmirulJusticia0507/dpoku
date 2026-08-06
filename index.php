@@ -156,9 +156,11 @@ $dpoList = $koneksidpogendeng->query(
 <div class="bg-white rounded-xl shadow p-6">
   <div class="flex flex-wrap justify-between items-center mb-4 gap-2">
     <h3 class="text-xl font-bold text-gray-800">Daftar DPO</h3>
-    <a href="Inputdpo.php" class="bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition">
-      <i class="fas fa-plus mr-1"></i> Tambah DPO
-    </a>
+    <?php if ($userRole !== 'viewer'): ?>
+      <a href="Inputdpo.php" class="bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition">
+        <i class="fas fa-plus mr-1"></i> Tambah DPO
+      </a>
+    <?php endif; ?>
   </div>
 
   <div class="overflow-x-auto">
@@ -190,8 +192,10 @@ $dpoList = $koneksidpogendeng->query(
               <td class="px-3 py-2"><span class="inline-block <?= $badge ?> text-white text-xs font-bold px-3 py-1 rounded-full"><?= htmlspecialchars($row['status_dpo']) ?></span></td>
               <td class="px-3 py-2 whitespace-nowrap">
                 <a href="detail_dpo.php?id=<?= $row['id'] ?>" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1 rounded-lg transition" title="Detail"><i class="fas fa-eye"></i></a>
-                <a href="edit_dpo.php?id=<?= $row['id'] ?>" class="bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-semibold px-3 py-1 rounded-lg transition" title="Edit"><i class="fas fa-edit"></i></a>
-                <a href="hapus_dpo.php?id=<?= $row['id'] ?>" class="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1 rounded-lg transition" title="Hapus" onclick="return confirm('Yakin mau hapus DPO ini?')"><i class="fas fa-trash"></i></a>
+                <?php if ($userRole !== 'viewer'): ?>
+                  <a href="edit_dpo.php?id=<?= $row['id'] ?>" class="bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-semibold px-3 py-1 rounded-lg transition" title="Edit"><i class="fas fa-edit"></i></a>
+                  <a href="hapus_dpo.php?id=<?= $row['id'] ?>" class="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1 rounded-lg transition" title="Hapus" onclick="return confirm('Yakin mau hapus DPO ini?')"><i class="fas fa-trash"></i></a>
+                <?php endif; ?>
               </td>
             </tr>
           <?php endforeach; ?>

@@ -6,18 +6,22 @@ $current    = basename($_SERVER['PHP_SELF']);
 
 $navItems = [
     ['href' => 'index.php',              'icon' => 'fas fa-tachometer-alt', 'label' => 'Dashboard'],
-    ['href' => 'Inputdpo.php',           'icon' => 'fas fa-user-secret',    'label' => 'Input DPO'],
+    ['href' => 'Inputdpo.php',           'icon' => 'fas fa-user-secret',    'label' => 'Input DPO', 'roles' => ['admin', 'operator']],
     ['href' => 'laporan_dpo.php',        'icon' => 'fas fa-file-alt',       'label' => 'Laporan DPO'],
     ['href' => 'daftar_pejabat.php',     'icon' => 'fas fa-id-badge',       'label' => 'Daftar Pejabat'],
-    ['href' => 'Inputinstansi.php',      'icon' => 'fas fa-building',       'label' => 'Input Instansi'],
-    ['href' => 'Inputjeniskasus.php',    'icon' => 'fas fa-gavel',          'label' => 'Input Jenis Kasus'],
-    ['href' => 'Inputjenishukuman.php',  'icon' => 'fas fa-balance-scale',  'label' => 'Input Jenis Hukuman'],
+    ['href' => 'Inputinstansi.php',      'icon' => 'fas fa-building',       'label' => 'Input Instansi', 'roles' => ['admin', 'operator']],
+    ['href' => 'Inputjeniskasus.php',    'icon' => 'fas fa-gavel',          'label' => 'Input Jenis Kasus', 'roles' => ['admin', 'operator']],
+    ['href' => 'Inputjenishukuman.php',  'icon' => 'fas fa-balance-scale',  'label' => 'Input Jenis Hukuman', 'roles' => ['admin', 'operator']],
     ['href' => 'Usermanagement.php',     'icon' => 'fas fa-users-cog',      'label' => 'User Management', 'role' => 'admin'],
-    ['href' => 'Bounty.php',             'icon' => 'fas fa-money-bill-wave','label' => 'Bounty'],
+    ['href' => 'Bounty.php',             'icon' => 'fas fa-money-bill-wave','label' => 'Bounty', 'roles' => ['admin', 'operator']],
 ];
 
 $userRole = $_SESSION['role'] ?? 'operator';
-$navItems = array_filter($navItems, fn($item) => !isset($item['role']) || $item['role'] === $userRole);
+$navItems = array_filter($navItems, function ($item) use ($userRole) {
+    if (isset($item['roles']) && !in_array($userRole, $item['roles'], true)) return false;
+    if (isset($item['role']) && $item['role'] !== $userRole) return false;
+    return true;
+});
 ?>
 <!DOCTYPE html>
 <html lang="id">

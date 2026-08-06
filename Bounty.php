@@ -1,5 +1,7 @@
 <?php 
 include 'Koneksi.php';
+include 'session.php';
+if (is_viewer()) { header("Location: index.php"); exit; }
 $page_title = 'Form Input Bounty';
 include 'Header.php';
 ?>

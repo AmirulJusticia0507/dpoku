@@ -55,11 +55,22 @@ Kredensial bisa di-override lewat environment variable:
 
 ## User Default
 
-| Username | Password  |
-|----------|-----------|
-| `admin`  | `admin123` |
+| Username | Password  | Role     |
+|----------|-----------|----------|
+| `admin`  | `admin123` | admin   |
 
 > Ganti password setelah login pertama melalui menu User Management.
+
+## Peran (Role)
+
+| Role        | Hak Akses |
+|-------------|-----------|
+| `admin`     | Semua akses (lihat, tambah, ubah, hapus, kelola user) |
+| `operator`  | Lihat, tambah, ubah, hapus data (tanpa menu User Management) |
+| `viewer`    | Read-only: hanya melihat daftar pejabat, laporan DPO, dan detail; semua menu input/edit/hapus disembunyikan dan diblokir |
+
+Role diatur di menu **User Management** (khusus admin). Aplikasi memblokir akses langsung
+melalui URL untuk role yang tidak diizinkan (`session.php`, `Header.php`).
 
 ## Struktur Database
 
@@ -69,16 +80,32 @@ Kredensial bisa di-override lewat environment variable:
 - `"user"` - akun pengguna (reserved keyword, di-quote)
 - `bounty` - jumlah bounty per kasus
 - `dpo` - data daftar pencarian orang
+- `dpo_status_log` - riwayat perubahan status DPO
+- `dpo_bukti` - bukti pendukung (foto) per DPO
 - `audit_log` - catatan aktivitas pengguna
+
+## Halaman Aplikasi
+
+- `index.php` - dashboard + daftar DPO
+- `daftar_pejabat.php` - daftar pejabat (data KMP, BPN, DPR)
+- `detail_pejabat.php` - detail pejabat
+- `laporan_dpo.php` - laporan DPO + export CSV/Excel/PDF
+- `Inputdpo.php` / `edit_dpo.php` / `detail_dpo.php` - kelola DPO
+- `Bounty.php`, `Inputinstansi.php`, `Inputjeniskasus.php`, `Inputjenishukuman.php` - master data
+- `Usermanagement.php` - kelola user (admin)
 
 ## Fitur
 
 - Login dengan rate-limiting (anti brute-force)
+- Role-based access: admin / operator / viewer (read-only)
 - CRUD DPO, instansi, jenis kasus, jenis hukuman, user, bounty
-- Pencarian DPO (NIK, nama, instansi)
+- Pencarian DPO (NIK, nama, instansi) + autocomplete
 - Upload foto DPO dengan frame "WANTED"
+- Daftar pejabat (Kabinet Merah Putih 2024-2029, BPN, DPR)
+- Laporan DPO dengan export CSV / Excel / PDF
 - Export CSV dengan filter
 - Audit log semua aktivitas
+- Riwayat perubahan status DPO
 - UI Tailwind CSS (mobile responsive)
 
 ## Lisensi

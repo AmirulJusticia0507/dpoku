@@ -29,7 +29,7 @@ include 'Header.php';
     $amount_saldo = preg_replace('/[^0-9]/', '', $_POST['amount_saldo'] ?? '0');
     $email = trim($_POST['email']);
     $role = trim($_POST['role'] ?? 'operator');
-    if (!in_array($role, ['admin', 'operator'])) $role = 'operator';
+    if (!in_array($role, ['admin', 'operator', 'viewer'])) $role = 'operator';
     $createdBy = (int) ($_SESSION['user_id'] ?? 0);
 
     $stmt = $koneksidpogendeng->prepare(
@@ -53,7 +53,7 @@ include 'Header.php';
     $amount_saldo = preg_replace('/[^0-9]/', '', $_POST['amount_saldo'] ?? '0');
     $email = trim($_POST['email']);
     $role = trim($_POST['role'] ?? 'operator');
-    if (!in_array($role, ['admin', 'operator'])) $role = 'operator';
+    if (!in_array($role, ['admin', 'operator', 'viewer'])) $role = 'operator';
     $updatedBy = (int) ($_SESSION['user_id'] ?? 0);
 
     $stmt = $koneksidpogendeng->prepare(
@@ -138,6 +138,7 @@ include 'Header.php';
       <label for="role" class="block text-sm font-medium text-gray-700 mb-1">Role</label>
       <select id="role" name="role" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
         <option value="operator" <?= $editData && $editData['role'] === 'operator' ? 'selected' : '' ?>>Operator</option>
+        <option value="viewer" <?= $editData && $editData['role'] === 'viewer' ? 'selected' : '' ?>>Viewer (read-only)</option>
         <option value="admin" <?= $editData && $editData['role'] === 'admin' ? 'selected' : '' ?>>Admin</option>
       </select>
     </div>
@@ -184,6 +185,8 @@ include 'Header.php';
             <td class="px-3 py-2">
               <?php if (($d['role'] ?? 'operator') === 'admin'): ?>
                 <span class="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded-full">ADMIN</span>
+              <?php elseif (($d['role'] ?? 'operator') === 'viewer'): ?>
+                <span class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded-full">VIEWER</span>
               <?php else: ?>
                 <span class="bg-gray-100 text-gray-700 text-xs font-bold px-2 py-1 rounded-full">OPERATOR</span>
               <?php endif; ?>
