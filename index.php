@@ -12,6 +12,17 @@ $totalBounty = (int) $koneksidpogendeng->query("SELECT COALESCE(SUM(jumlah_bount
 $totalKasus = (int) $koneksidpogendeng->query("SELECT COUNT(*) FROM jenis_kasus")->fetchColumn();
 $totalUser  = (int) $koneksidpogendeng->query("SELECT COUNT(*) FROM \"user\"")->fetchColumn();
 
+// Statistik daftar pejabat (BPN / KABINET / DPR)
+$totalPejabat = (int) $koneksidpogendeng->query("SELECT COUNT(*) FROM daftar_pejabat")->fetchColumn();
+$perSumber    = $koneksidpogendeng->query(
+    "SELECT sumber, COUNT(*) AS jumlah FROM daftar_pejabat GROUP BY sumber ORDER BY jumlah DESC"
+)->fetchAll();
+$topInstansiPejabat = $koneksidpogendeng->query(
+    "SELECT instansi, COUNT(*) AS jumlah
+     FROM daftar_pejabat WHERE instansi <> '' AND instansi <> 'TIDAK DIKETAHUI'
+     GROUP BY instansi ORDER BY jumlah DESC LIMIT 5"
+)->fetchAll();
+
 // Kasus teratas
 $topKasus = $koneksidpogendeng->query(
     "SELECT jenis_kasus.jenis_kasus, COUNT(dpo.id) AS jumlah
@@ -78,6 +89,40 @@ $dpoList = $koneksidpogendeng->query(
       <p class="text-2xl font-bold text-gray-800"><?= $totalUser ?></p>
       <p class="text-sm text-gray-500">User Terdaftar</p>
     </div>
+  </div>
+</div>
+
+<!-- ===================== DAFTAR PEJABAT ===================== -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+  <div class="bg-white rounded-xl shadow p-5 lg:col-span-2">
+    <div class="flex flex-wrap justify-between items-center mb-3">
+      <h4 class="font-bold text-gray-800">Daftar Pejabat (BPN / KABINET / DPR)</h4>
+      <a href="daftar_pejabat.php" class="text-blue-600 hover:text-blue-700 text-sm font-semibold">Lihat semua <i class="fas fa-arrow-right ml-1"></i></a>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <?php foreach ($perSumber as $ps): ?>
+        <a href="daftar_pejabat.php?sumber=<?= urlencode($ps['sumber']) ?>" class="bg-gray-50 hover:bg-gray-100 rounded-xl p-4 text-center transition">
+          <p class="text-3xl font-bold text-gray-800"><?= number_format((int) $ps['jumlah'], 0, ',', '.') ?></p>
+          <p class="text-sm text-gray-500 mt-1"><?= htmlspecialchars($ps['sumber']) ?></p>
+        </a>
+      <?php endforeach; ?>
+      <a href="daftar_pejabat.php" class="bg-gray-50 hover:bg-gray-100 rounded-xl p-4 text-center transition">
+        <p class="text-3xl font-bold text-gray-800"><?= number_format($totalPejabat, 0, ',', '.') ?></p>
+        <p class="text-sm text-gray-500 mt-1">Total</p>
+      </a>
+    </div>
+  </div>
+  <div class="bg-white rounded-xl shadow p-5">
+    <h4 class="font-bold text-gray-800 mb-3">Instansi Terbanyak</h4>
+    <?php foreach ($topInstansiPejabat as $ti): ?>
+      <div class="flex justify-between items-center py-2 border-b border-gray-100 text-sm">
+        <span class="text-gray-700 truncate pr-2"><?= htmlspecialchars($ti['instansi']) ?></span>
+        <span class="font-bold text-gray-800 shrink-0"><?= number_format((int) $ti['jumlah'], 0, ',', '.') ?></span>
+      </div>
+    <?php endforeach; ?>
+    <?php if (!$topInstansiPejabat): ?>
+      <p class="text-sm text-gray-400">Belum ada data.</p>
+    <?php endif; ?>
   </div>
 </div>
 
